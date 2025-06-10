@@ -25,6 +25,7 @@ import {sourceMapState} from '../source_map/source_map_state';
 import {Button} from '../widgets/button';
 import {lynxPerfGlobals} from '../lynx_perf/lynx_perf_globals';
 import {Intent} from '../widgets/common';
+import {RightSidebarTab} from '../lynx_perf/types';
 
 class Progress implements m.ClassComponent<TraceImplAttrs> {
   view({attrs}: m.CVnode<TraceImplAttrs>): m.Children {
@@ -101,13 +102,39 @@ export class Topbar implements m.ClassComponent<TopbarAttrs> {
       omnibox,
       attrs.trace && m(Progress, {trace: attrs.trace}),
       sourceMapState.state.sourceMapDecodePopup?.render(),
+      m(Button, {
+        className: 'lynx-assistant',
+        label: 'Trace Analysis',
+        icon: 'robot',
+        intent: Intent.Primary,
+        onclick: (_event: Event) => {
+          if (
+            lynxPerfGlobals.state.rightSidebarTab ===
+            RightSidebarTab.TraceAssistant
+          ) {
+            lynxPerfGlobals.closeRightSidebar();
+          } else {
+            lynxPerfGlobals.changeRightSidebarTab(
+              RightSidebarTab.TraceAssistant,
+            );
+          }
+        },
+      }),
       lynxPerfGlobals.state.lynxviewInstances.length > 0 &&
         m(Button, {
           className: 'lynx-menu',
           label: 'Focus LynxView',
           icon: 'center_focus_strong',
           intent: Intent.Primary,
-          onclick: (_event: Event) => lynxPerfGlobals.toggleRightSidebar(),
+          onclick: (_event: Event) => {
+            if (
+              lynxPerfGlobals.state.rightSidebarTab === RightSidebarTab.LynxView
+            ) {
+              lynxPerfGlobals.closeRightSidebar();
+            } else {
+              lynxPerfGlobals.changeRightSidebarTab(RightSidebarTab.LynxView);
+            }
+          },
         }),
       attrs.trace && m(TraceErrorIcon, {trace: attrs.trace}),
     );

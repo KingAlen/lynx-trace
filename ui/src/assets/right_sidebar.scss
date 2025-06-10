@@ -36,6 +36,10 @@
   }
 }
 
+.rightbar-page {
+  height: 100%;
+}
+
 .show-right-sidebar {
   visibility: visible;
   margin-right: 0;
@@ -85,9 +89,28 @@
 }
 
 .rightbar-container {
-  display: flex;
-  width: 350px;
-  margin: 0 auto;
+  grid-area: right-sidebar;
+  width: var(--right-sidebar-width, 350px);
+  min-width: 350px;
+  max-width: 700px;
+  height: 100%;
+  position: relative;
+}
+
+.rightbar-container-resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  background-color: #c0c0c0;
+  cursor: ew-resize;
+  &:hover {
+    background-color: #a1a1a1;
+  }
+  &.dragging {
+    background-color: #a1a1a1;
+  }
 }
 
 .rightbar-buttons {

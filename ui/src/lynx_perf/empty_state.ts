@@ -16,7 +16,7 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
-import {LynxState} from './types';
+import {LynxState, RightSidebarTab} from './types';
 
 export function createEmptyLynxState(): LynxState {
   return {
@@ -34,5 +34,7 @@ export function createEmptyLynxState(): LynxState {
     selectedLynxviewInstances: [],
     filteredTraceSet: new Set(),
     showRightSidebar: false,
+    rightSidebarTab: RightSidebarTab.Unknown,
+    rightSidebarWidth: 350,
   };
 }
