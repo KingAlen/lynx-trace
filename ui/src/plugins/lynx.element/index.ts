@@ -149,7 +149,13 @@ export default class LynxElementPlugin implements PerfettoPlugin {
       args.forEach((arg) => {
         if (arg.key === 'debug.content' || arg.key === 'args.content') {
           const content = arg.value as string;
-          const rootElementAbbr = JSON.parse(content);
+          let rootElementAbbr;
+          try {
+            rootElementAbbr = JSON.parse(content);
+          } catch (error) {
+            console.error('JSON parse error:', error, 'content:', content);
+            return;
+          }
           const rootElement = reConstructElementTree(
             rootElementAbbr,
             undefined,
