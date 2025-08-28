@@ -343,6 +343,20 @@ class TraceStorage {
     return it->second;
   }
 
+  void SetPipelineFlowIds(const std::string& pipeline_id,
+                          std::vector<uint64_t> flow_ids) {
+    pipeline_id_to_flow_id_[pipeline_id] = flow_ids;
+  }
+
+  std::optional<std::vector<uint64_t>> GetPipelineFlowIds(
+      const std::string& pipeline_id) {
+    auto it = pipeline_id_to_flow_id_.find(pipeline_id);
+    if (it == pipeline_id_to_flow_id_.end()) {
+      return std::nullopt;
+    }
+    return it->second;
+  }
+
   class ScopedStatsTracer {
    public:
     ScopedStatsTracer(TraceStorage* storage, size_t key)
@@ -1240,6 +1254,7 @@ class TraceStorage {
 
   std::map<std::string, std::string> instance_id_to_url_;
   std::map<std::string, std::string> pipeline_id_to_flag_;
+  std::map<std::string, std::vector<uint64_t>> pipeline_id_to_flow_id_;
 
   std::map<uint32_t, std::string> slice_to_instace_id_;
 };
