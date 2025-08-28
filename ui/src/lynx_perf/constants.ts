@@ -78,6 +78,12 @@ export const NATIVEMODULE_PLATFORM_METHOD_END =
   'JSBTiming::jsb_func_platform_method_end';
 export const NATIVEMODULE_TIMING_FLUSH = 'JSBTiming::Flush';
 export const NATIVEMODULE_NETWORK_REQUEST = 'Network::SendNetworkRequest';
+
+export const NATIVEMODULE_INVOKE = 'NativeModule::Invoke';
+export const NATIVEMODULE_PLATFORM_CALLBACK_START =
+  'NativeModule::PlatformCallbackStart';
+export const NATIVEMODULE_CALLBACK = 'NativeModule::Callback';
+
 // Frame Jank
 export const DROP_FRAME_THRESHOLD = 16666666;
 

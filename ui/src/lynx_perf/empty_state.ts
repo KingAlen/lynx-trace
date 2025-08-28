@@ -26,6 +26,7 @@ export function createEmptyLynxState(): LynxState {
     traceIdToJSBName: new Map(),
     traceIdToScrollName: new Map(),
     trackUriToThreadMap: new Map(),
+    nonTimingNativeModuleTraces: false,
     frameDurationMap: new Map(),
     highlightNoInstanceIdTrace: true,
     lynxviewInstances: [],

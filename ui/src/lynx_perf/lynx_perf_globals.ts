@@ -54,6 +54,12 @@ class LynxPerfGlobals {
     });
   }
 
+  setNonTimingNativeModuleTraces(optimized: boolean) {
+    this._store.edit((draft) => {
+      draft.nonTimingNativeModuleTraces = optimized;
+    });
+  }
+
   updateVitalTimestampLine(timestamp: VitalTimestampLine[]) {
     this._store.edit((draft) => {
       draft.vitalTimestampLine = timestamp;

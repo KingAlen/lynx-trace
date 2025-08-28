@@ -23,9 +23,12 @@ import {Trace} from '../../public/trace';
 import {NativeModuleDetailView} from './native_module_detail_view';
 import {
   LYNX_NATIVE_MODULE_ID,
+  NATIVEMODULE_CALLBACK,
   NATIVEMODULE_CALLBACK_CONVERT_PARAMS_END,
   NATIVEMODULE_CALLBACK_INVOKE_END,
   NATIVEMODULE_CONVERT_PARAMS_END,
+  NATIVEMODULE_INVOKE,
+  NATIVEMODULE_PLATFORM_CALLBACK_START,
   NATIVEMODULE_PLATFORM_METHOD_END,
   NATIVEMODULE_THREAD_SWITCH_END,
   NATIVEMODULE_THREAD_SWITCH_START,
@@ -49,6 +52,7 @@ import {Timestamp} from '../../components/widgets/timestamp';
 import {DurationWidget} from '../../components/widgets/duration';
 import {lynxPerfGlobals} from '../../lynx_perf/lynx_perf_globals';
 import {eventLoggerState} from '../../event_logger';
+import {NUM} from '../../trace_processor/query_result';
 
 const STAGE_CONVERT_INPUT_PARAMS = 'Convert Parameters';
 const STAGE_DESCRIPTION_CONVERT_INPUT_PARAMS = `Convert the parameters from JavaScript types to platform-specific types. For more details about the parameters, refer to the 'arg0','arg1','arg2'... fields in the Arguments section.`;
@@ -94,8 +98,7 @@ export class NativeModuleDetailsPanel implements TrackEventDetailsPanel {
     }
 
     const flows = await querySliceRelatedFlows(this.ctx.engine, eventId);
-    const startTs = Number(flows[0].begin.sliceStartTs);
-    this.nativeModuleSections = this.assembleSections(flows, startTs);
+    this.nativeModuleSections = await this.assembleSections(flows);
     NativeModuleDataManager.setNativeModuleSections(
       eventId,
       this.nativeModuleSections,
@@ -111,10 +114,13 @@ export class NativeModuleDetailsPanel implements TrackEventDetailsPanel {
   /**
    * Organizes flow events into logical execution stages
    * @param flows - Array of flow events
-   * @param beginTs - Start timestamp
    * @returns Array of categorized execution stages
    */
-  private assembleSections(flows: Flow[], beginTs: number) {
+  private async assembleSections(flows: Flow[]) {
+    if (lynxPerfGlobals.state.nonTimingNativeModuleTraces) {
+      return await this.assembleOptimizedSections(flows);  
+    }
+    const beginTs = Number(flows[0].begin.sliceStartTs);
     const sections: NativeModuleSection[] = [];
     const inputParamsEnd = this.findSectionTs(
       NATIVEMODULE_CONVERT_PARAMS_END,
@@ -241,6 +247,126 @@ export class NativeModuleDetailsPanel implements TrackEventDetailsPanel {
     return sections;
   }
 
+  private async assembleOptimizedSections(flows: Flow[]) {
+    const sections: NativeModuleSection[] = [];
+    const nativeModuleInvoke = this.findSectionTs(
+      NATIVEMODULE_INVOKE,
+      flows,
+    );
+    const platformCallbackStart = this.findSectionTs(
+      NATIVEMODULE_PLATFORM_CALLBACK_START,
+      flows,
+    );
+    const nativeModuleCallback = this.findSectionTs(
+      NATIVEMODULE_CALLBACK,
+      flows,
+    );
+    if (nativeModuleInvoke === undefined || platformCallbackStart === undefined || nativeModuleCallback === undefined) {
+      return sections;
+    }
+    const jsValueToPubValue = await this.getDescendantsWithSpecificName("JSValueToPubValue", nativeModuleInvoke.sliceId);
+    const pubValueToJSValue = await this.getDescendantsWithSpecificName("PubValueToJSValue", nativeModuleCallback.sliceId);
+    const callPlatformImplementation = await this.getDescendantsWithSpecificName("CallPlatformImplementation", nativeModuleInvoke.sliceId);
+    if (jsValueToPubValue === undefined || pubValueToJSValue === undefined || callPlatformImplementation === undefined) {
+      return sections;
+    }
+     if (isSyncNativeModule(flows)) {
+      sections.push({
+        beginTs: Number(nativeModuleInvoke.sliceStartTs),
+        endTs: jsValueToPubValue.ts + jsValueToPubValue.dur,
+        name: STAGE_CONVERT_INPUT_PARAMS,
+        description: STAGE_DESCRIPTION_CONVERT_INPUT_PARAMS,
+        thread: nativeModuleInvoke.threadName,
+      });
+      sections.push({
+        beginTs: jsValueToPubValue.ts + jsValueToPubValue.dur,
+        endTs: Number(nativeModuleCallback.sliceStartTs),
+        name: STAGE_PLATFORM_IMPLEMENTATION,
+        description: STAGE_DESCRIPTION_PLATFORM_IMPLEMENTATION,
+        thread: nativeModuleCallback.threadName,
+      });
+      sections.push({
+        beginTs: Number(nativeModuleCallback.sliceStartTs),
+        endTs: pubValueToJSValue.ts + pubValueToJSValue.dur,
+        name: STAGE_CONVERT_OUTPUT_PARAMS,
+        description: STAGE_DESCRIPTION_CONVERT_OUTPUT_PARAMS,
+        thread: nativeModuleCallback.threadName,
+      });
+      sections.push({
+        beginTs: pubValueToJSValue.ts + pubValueToJSValue.dur,
+        endTs: Number(nativeModuleCallback.sliceEndTs),
+        name: STAGE_INVOKE_CALLBACK,
+        description: STAGE_DESCRIPTION_INVOKE_CALLBACK,
+        thread: nativeModuleInvoke.threadName,
+      });
+      sections.push({
+        beginTs: Number(nativeModuleCallback.sliceEndTs),
+        endTs: Number(nativeModuleInvoke.sliceEndTs),
+        name: STAGE_FINISH_PLATFORM_IMPLEMENTATION,
+        description: STAGE_DESCRIPTION_FINISH_PLATFORM_IMPLEMENTATION,
+        thread: nativeModuleInvoke.threadName,
+      });
+
+    } else {
+      sections.push({
+        beginTs: Number(nativeModuleInvoke.sliceStartTs),
+        endTs: jsValueToPubValue.ts + jsValueToPubValue.dur,
+        name: STAGE_CONVERT_INPUT_PARAMS,
+        description: STAGE_DESCRIPTION_CONVERT_INPUT_PARAMS,
+        thread: nativeModuleInvoke.threadName,
+      });
+      const threadInfo: Record<string, number> = {};
+      threadInfo[nativeModuleInvoke.threadName] = callPlatformImplementation.dur;
+      threadInfo['other'] = Number(platformCallbackStart.sliceStartTs) - callPlatformImplementation.dur - callPlatformImplementation.ts;
+      sections.push({
+        beginTs: jsValueToPubValue.ts + jsValueToPubValue.dur,
+        endTs: Number(platformCallbackStart.sliceStartTs),
+        name: STAGE_PLATFORM_IMPLEMENTATION,
+        description: STAGE_DESCRIPTION_PLATFORM_IMPLEMENTATION,
+        thread:threadInfo
+      });
+      sections.push({
+        beginTs: Number(platformCallbackStart.sliceEndTs),
+        endTs: Number(nativeModuleCallback.sliceStartTs),
+        name: STAGE_THREAD_SWITCHING,
+        description: `Waiting for callback tasks to be scheduled for execution on the '${nativeModuleCallback.threadName}' thread.`,
+        thread: '/',
+      });
+      sections.push({
+        beginTs: Number(nativeModuleCallback.sliceStartTs),
+        endTs: pubValueToJSValue.ts + pubValueToJSValue.dur,
+        name: STAGE_CONVERT_OUTPUT_PARAMS,
+        description: STAGE_DESCRIPTION_CONVERT_OUTPUT_PARAMS,
+        thread: nativeModuleCallback.threadName,
+      });
+      sections.push({
+        beginTs: pubValueToJSValue.ts + pubValueToJSValue.dur,
+        endTs: Number(nativeModuleCallback.sliceEndTs),
+        name: STAGE_INVOKE_CALLBACK,
+        description: STAGE_DESCRIPTION_INVOKE_CALLBACK,
+        thread: nativeModuleCallback.threadName,
+      });
+    }
+    return sections;
+  }
+
+  private async getDescendantsWithSpecificName(traceName: string, traceId: number) {
+    const query = `
+      select 
+      t.ts,
+      t.dur 
+      from descendant_slice(${traceId}) t
+      where t.name = '${traceName}' limit 1`;
+      const result = await this.ctx.engine.query(query);
+      if (result.numRows() > 0) {
+        return result.firstRow({
+          ts: NUM,
+          dur: NUM,
+        });
+      }
+      return undefined;
+  }
+
   /**
    * Calculates thread execution time distribution
    * @param start - Flow start point
@@ -269,6 +395,8 @@ export class NativeModuleDetailsPanel implements TrackEventDetailsPanel {
     for (const flow of flows) {
       if (flow.begin.sliceName === traceName) {
         return flow.begin;
+      } else if (flow.end.sliceName === traceName) {
+        return flow.end;
       }
     }
     return undefined;

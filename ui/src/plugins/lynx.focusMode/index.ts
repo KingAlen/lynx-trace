@@ -26,6 +26,7 @@ import {
   LYNX_LOAD_BUNDLE,
   LYNX_NATIVE_MODULE_ID,
   NATIVEMODULE_CALL,
+  NATIVEMODULE_INVOKE,
   NO_INSTANCE_ID,
   PARAMETER_FOCUS_LYNX_VIEWS,
 } from '../../lynx_perf/constants';
@@ -266,7 +267,7 @@ export default class FocusMode implements PerfettoPlugin {
             `select 
                     slice.id as id
                 from slice 
-                where (slice.name='${NATIVEMODULE_CALL}' or slice.name='${DEPRECATED_NATIVEMODULE_CALL}')
+                where (slice.name='${NATIVEMODULE_CALL}' or slice.name='${DEPRECATED_NATIVEMODULE_CALL}' or slice.name='${NATIVEMODULE_INVOKE}')
                 `,
           );
           const it = queryRes.iter({
