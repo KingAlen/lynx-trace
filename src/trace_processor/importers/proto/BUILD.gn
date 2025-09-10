@@ -70,6 +70,10 @@ source_set("minimal") {
     "track_event_tracker.cc",
     "track_event_tracker.h",
   ]
+
+  # Disable missing-prototypes warning for js_profile_module.cc
+  cflags = [ "-Wno-missing-prototypes" ]
+
   public_deps = [ ":proto_importer_module" ]
   deps = [
     ":gen_cc_android_track_event_descriptor",
