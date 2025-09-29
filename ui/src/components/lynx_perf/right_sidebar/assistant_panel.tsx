@@ -1,17 +1,3 @@
-// Copyright (C) 2025 The Android Open Source Project
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 // Copyright 2025 The Lynx Authors. All rights reserved.
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
@@ -19,11 +5,61 @@
 import {Component} from 'react';
 import Markdown from 'react-markdown';
 import {Button, Spin} from 'antd';
+import { TraceQuery } from '../../../plugins/lynx.AIAnalysis/lynx_agent/tools/trace_query';
+import { AppImpl } from '../../../core/app_impl';
+import { Agent } from '../../../plugins/lynx.AIAnalysis/lynx_agent/agent/agent';
+import AIAnalysis from '../../../plugins/lynx.AIAnalysis';
+import { CLIConsole } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/cli/cli_console';
+import { AgentConfig } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/config';
+import { QueryResult, SqlValue } from '../../../trace_processor/query_result';
+
 
 interface TraceAssistantPanelState {
   status: 'initial' | 'analyzing' | 'completed';
   analysisResult: string;
   traceUrl: string;
+}
+
+class TraceProcessorImpl implements TraceQuery {
+  async initProcessor(_trace_url: string) {
+    // in web page, we do not need to init trace processor
+  }
+
+  async detroyProcessor() {
+    // in web page, we do not need to detroy trace processor
+  }
+
+  async query(sql: string): Promise<string> {
+    const engine = AppImpl.instance.trace?.engine;
+    if (!engine) {
+      return '';
+    }
+    const result = await engine.query(sql);
+    return this.resultToJson(result);
+  }
+
+  resultToJson(result: QueryResult): string {
+      const columns = result.columns();
+      const rows: unknown[] = [];
+      for (const it = result.iter({}); it.valid(); it.next()) {
+          if (rows.length > 5000) {
+            throw new Error(
+                'Query returned too many results, max 5000 rows. Results should be aggregates rather than raw data.',
+            );
+          }
+
+          const row: {[key: string]: SqlValue} = {};
+          for (const name of columns) {
+            let value = it.get(name);
+            if (typeof value === 'bigint') {
+                value = Number(value);
+            }
+            row[name] = value;
+          }
+          rows.push(row);
+      }
+      return JSON.stringify(rows);
+  }
 }
 
 export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState> {
@@ -32,29 +68,39 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     this.state = {
       status: 'initial',
       analysisResult: '',
-      traceUrl: window.location.href // 获取当前页面URL作为trace_url
+      traceUrl: window.location.href
     };
+  }
+
+   traceAnalysis = async () => {
+     const config : AgentConfig = {
+      max_steps: 20,
+      model: {
+        model: AIAnalysis.modelNameSetting.get(),
+        model_provider: {
+          api_key: AIAnalysis.APIKeySetting.get(),
+          provider: AIAnalysis.modelProviderSetting.get(),
+          base_url: AIAnalysis.baseUrlSetting.get(),
+        },
+        parallel_tool_calls: true,
+        max_retries: 2,
+      },
+      tools: [],
+      trace_processor: new TraceProcessorImpl()
+    }
+    console.log('config is : ' + JSON.stringify(config));
+    const agent = new Agent(config, new CLIConsole());
+    return await agent.run(window.location.href);
   }
 
   handleYesClick = async () => {
     this.setState({ status: 'analyzing' });
     try {
-      const response = await fetch('https://vqhi0ljj.fn.bytedance.net/trace_analysis_markdown', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          trace_url: this.state.traceUrl
-        })
-      });
-      
-      if (response.ok) {
-        const responseText = await response.text();
-        const result = JSON.parse(responseText).result;
+      const result = await this.traceAnalysis();
+      if (result.finalResult) {
         this.setState({ 
           status: 'completed',
-          analysisResult: result
+          analysisResult: result.finalResult
         });
       } else {
         throw new Error('分析请求失败');

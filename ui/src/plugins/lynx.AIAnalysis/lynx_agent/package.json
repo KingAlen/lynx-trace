@@ -1,0 +1,34 @@
+{
+    "name": "lynx-agent",
+    "version": "0.0.1",
+    "description": "",
+    "main": "./dist/index.js",
+    "scripts": {
+        "build": "tsc",
+        "postinstall": "npm run build",
+        "dev": "tsc --watch",
+        "start": "node ./dist/index.js"
+    },
+    "dependencies": {
+        "@types/uuid": "^10.0.0",
+        "bcryptjs": "^2.4.3",
+        "dotenv": "^16.5.0",
+        "jsonwebtoken": "^9.0.2",
+        "koa": "^2.13.4",
+        "koa-bodyparser": "^4.4.1",
+        "koa-router": "^12.0.1",
+        "openai": "4.92.0",
+        "uuid": "^11.1.0"
+    },
+    "devDependencies": {
+        "@tsconfig/node18": "^18.2.0",
+        "@types/bcryptjs": "^2.4.6",
+        "@types/jsonwebtoken": "^9.0.5",
+        "@types/koa": "2.13.6",
+        "@types/koa-bodyparser": "^4.3.12",
+        "@types/koa-router": "^7.4.8",
+        "@types/node": "^18.15.3",
+        "node-fetch": "^2.7.0",
+        "typescript": "^4.0.0 || ^5.0.0"
+    }
+}

@@ -38,3 +38,4 @@ GRTAGS
 GTAGS
 perf.data*
 TAGS
+ui/src/plugins/lynx.AIAnalysis/lynx_agent/dist/*
