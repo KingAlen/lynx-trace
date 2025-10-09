@@ -2,7 +2,6 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
-
 const protos = require('./protos.js');
 
 // Use dynamic import for fetch to handle ESM
@@ -36,11 +35,12 @@ export class TraceProcessorHttpClient {
    */
   async executeQuery(sql: string): Promise<any> {
     const queryArgs = protos.perfetto.protos.QueryArgs.create({
-      sqlQuery: sql
+      sqlQuery: sql,
     });
-    
-    const requestBuffer = protos.perfetto.protos.QueryArgs.encode(queryArgs).finish();
-    
+
+    const requestBuffer =
+      protos.perfetto.protos.QueryArgs.encode(queryArgs).finish();
+
     const response = await fetch(`${this.baseUrl}/query`, {
       method: 'POST',
       headers: {
@@ -55,13 +55,14 @@ export class TraceProcessorHttpClient {
 
     const arrayBuffer = await response.arrayBuffer();
     const responseBuffer = new Uint8Array(arrayBuffer);
-    
+
     if (responseBuffer.length === 0) {
       throw new Error('Empty response from server');
     }
-    
+
     try {
-      const queryResult = protos.perfetto.protos.QueryResult.decode(responseBuffer);
+      const queryResult =
+        protos.perfetto.protos.QueryResult.decode(responseBuffer);
       if (queryResult.error) {
         throw new Error(`Query error: ${queryResult.error}`);
       }
@@ -77,11 +78,12 @@ export class TraceProcessorHttpClient {
   async computeMetric(metrics: string[]): Promise<any> {
     const metricArgs = protos.perfetto.protos.ComputeMetricArgs.create({
       metricNames: metrics,
-      format: protos.perfetto.protos.ComputeMetricArgs.ResultFormat.TEXTPROTO
+      format: protos.perfetto.protos.ComputeMetricArgs.ResultFormat.TEXTPROTO,
     });
-    
-    const requestBuffer = protos.perfetto.protos.ComputeMetricArgs.encode(metricArgs).finish();
-    
+
+    const requestBuffer =
+      protos.perfetto.protos.ComputeMetricArgs.encode(metricArgs).finish();
+
     const response = await fetch(`${this.baseUrl}/compute_metric`, {
       method: 'POST',
       headers: {
@@ -96,13 +98,14 @@ export class TraceProcessorHttpClient {
 
     const arrayBuffer = await response.arrayBuffer();
     const responseBuffer = new Uint8Array(arrayBuffer);
-    
+
     if (responseBuffer.length === 0) {
       throw new Error('Empty response from server');
     }
-    
+
     try {
-      const metricResult = protos.perfetto.protos.ComputeMetricResult.decode(responseBuffer);
+      const metricResult =
+        protos.perfetto.protos.ComputeMetricResult.decode(responseBuffer);
       return metricResult;
     } catch (error) {
       throw new Error(`Failed to decode metric response: ${error}`);
@@ -135,7 +138,8 @@ export class TraceProcessorHttpClient {
         // Handle protobuf response if present
         const responseBuffer = new Uint8Array(arrayBuffer);
         try {
-          const result = protos.perfetto.protos.AppendTraceDataResult.decode(responseBuffer);
+          const result =
+            protos.perfetto.protos.AppendTraceDataResult.decode(responseBuffer);
           if (result.error) {
             throw new Error(`Parse failed: ${result.error}`);
           }
@@ -154,7 +158,7 @@ export class TraceProcessorHttpClient {
    */
   async notifyEof(): Promise<void> {
     const response = await fetch(`${this.baseUrl}/notify_eof`, {
-      method: 'GET'
+      method: 'GET',
     });
 
     if (!response.ok) {
@@ -167,7 +171,7 @@ export class TraceProcessorHttpClient {
    */
   async getStatus(): Promise<any> {
     const response = await fetch(`${this.baseUrl}/status`, {
-      method: 'GET'
+      method: 'GET',
     });
 
     if (!response.ok) {
@@ -176,13 +180,14 @@ export class TraceProcessorHttpClient {
 
     const arrayBuffer = await response.arrayBuffer();
     const responseBuffer = new Uint8Array(arrayBuffer);
-    
+
     if (responseBuffer.length === 0) {
       return {};
     }
-    
+
     try {
-      const statusResult = protos.perfetto.protos.StatusResult.decode(responseBuffer);
+      const statusResult =
+        protos.perfetto.protos.StatusResult.decode(responseBuffer);
       return statusResult;
     } catch (error) {
       throw new Error(`Failed to decode status response: ${error}`);
@@ -194,7 +199,7 @@ export class TraceProcessorHttpClient {
    */
   async enableMetatrace(): Promise<void> {
     const response = await fetch(`${this.baseUrl}/enable_metatrace`, {
-      method: 'GET'
+      method: 'GET',
     });
 
     if (!response.ok) {
@@ -207,27 +212,30 @@ export class TraceProcessorHttpClient {
    */
   async disableAndReadMetatrace(): Promise<any> {
     const response = await fetch(`${this.baseUrl}/disable_and_read_metatrace`, {
-      method: 'GET'
+      method: 'GET',
     });
 
     if (!response.ok) {
-      throw new Error(`Disable and read metatrace failed: ${response.statusText}`);
+      throw new Error(
+        `Disable and read metatrace failed: ${response.statusText}`,
+      );
     }
 
     const arrayBuffer = await response.arrayBuffer();
     const responseBuffer = new Uint8Array(arrayBuffer);
-    
+
     if (responseBuffer.length === 0) {
       return {};
     }
-    
+
     try {
-      const metatraceResult = protos.perfetto.protos.DisableAndReadMetatraceResult.decode(responseBuffer);
+      const metatraceResult =
+        protos.perfetto.protos.DisableAndReadMetatraceResult.decode(
+          responseBuffer,
+        );
       return metatraceResult;
     } catch (error) {
       throw new Error(`Failed to decode metatrace response: ${error}`);
     }
   }
-
-
 }

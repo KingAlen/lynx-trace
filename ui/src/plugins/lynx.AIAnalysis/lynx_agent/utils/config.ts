@@ -1,5 +1,3 @@
-import {TraceQuery} from '../tools/trace_query';
-
 /**
  * Model provider configuration. For official model providers such as OpenAI and Anthropic,
  * the base_url is optional. api_version is required for Azure.
@@ -32,6 +30,4 @@ export interface AgentConfig {
   max_steps: number;
   model: ModelConfig;
   tools: string[];
-
-  trace_processor?: TraceQuery;
 }

@@ -3,7 +3,7 @@ import {ModelConfig} from '../config';
 import {BaseLLMClient} from './base_client';
 import {LLMMessage, LLMResponse, LLMUsage} from './llm_basics';
 import {Tool, ToolCall} from '../../tools/base';
-import {ChatCompletionMessageFunctionToolCall} from 'openai/resources/chat/completions';
+import {ChatCompletionMessageToolCall} from 'openai/resources/chat/completions';
 
 // Provider配置接口
 export interface ProviderConfig {
@@ -163,7 +163,7 @@ export class OpenAICompatibleClient extends BaseLLMClient {
     const toolCalls: ToolCall[] = [];
     if (choice.message.tool_calls) {
       for (const toolCall of choice.message
-        .tool_calls as ChatCompletionMessageFunctionToolCall[]) {
+        .tool_calls as ChatCompletionMessageToolCall[]) {
         toolCalls.push({
           name: toolCall.function.name,
           call_id: toolCall.id,

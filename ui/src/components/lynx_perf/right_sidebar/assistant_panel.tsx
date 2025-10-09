@@ -7,11 +7,13 @@ import Markdown from 'react-markdown';
 import {Button, Spin} from 'antd';
 import { TraceQuery } from '../../../plugins/lynx.AIAnalysis/lynx_agent/tools/trace_query';
 import { AppImpl } from '../../../core/app_impl';
-import { Agent } from '../../../plugins/lynx.AIAnalysis/lynx_agent/agent/agent';
+import { generate_markdown_doc } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/markdown_doc';
 import AIAnalysis from '../../../plugins/lynx.AIAnalysis';
-import { CLIConsole } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/cli/cli_console';
 import { AgentConfig } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/config';
 import { QueryResult, SqlValue } from '../../../trace_processor/query_result';
+import { VerboseLogger } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/cli/verbose_logger';
+import { trace_analysis_impl } from '../../../plugins/lynx.AIAnalysis/lynx_agent/trace_analysis_impl';
+import { lynxPerfGlobals } from '../../../lynx_perf/lynx_perf_globals';
 
 
 interface TraceAssistantPanelState {
@@ -29,18 +31,18 @@ class TraceProcessorImpl implements TraceQuery {
     // in web page, we do not need to detroy trace processor
   }
 
-  async query(sql: string): Promise<string> {
+  async query(sql: string): Promise<Array<Record<string, SqlValue>>> {
     const engine = AppImpl.instance.trace?.engine;
     if (!engine) {
-      return '';
+      return [];
     }
     const result = await engine.query(sql);
-    return this.resultToJson(result);
+    return this.resultToArray(result);
   }
 
-  resultToJson(result: QueryResult): string {
+  resultToArray(result: QueryResult): Array<Record<string, SqlValue>> {
       const columns = result.columns();
-      const rows: unknown[] = [];
+      const rows: Array<Record<string, SqlValue>> = [];
       for (const it = result.iter({}); it.valid(); it.next()) {
           if (rows.length > 5000) {
             throw new Error(
@@ -58,7 +60,29 @@ class TraceProcessorImpl implements TraceQuery {
           }
           rows.push(row);
       }
-      return JSON.stringify(rows);
+      return rows;
+  }
+}
+
+class VerboseLoggerImpl implements VerboseLogger {
+  debug(message: string): void {
+    console.debug('debug: ' + message);
+  }
+  info(message: string): void {
+    console.info('info: ' + message);
+  }
+  warning(message: string): void {
+    console.warn('warning: ' + message);
+  }
+  error(message: string): void {
+    console.error('error: ' + message);
+  }
+  verbose_debug(message: string): void {
+    console.debug('verbose_debug: ' + message);
+  }
+  get_log_file_path(): string | undefined {
+    // in web page, we do not need to log file path
+    return undefined;
   }
 }
 
@@ -86,24 +110,22 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
         max_retries: 2,
       },
       tools: [],
-      trace_processor: new TraceProcessorImpl()
     }
-    console.log('config is : ' + JSON.stringify(config));
-    const agent = new Agent(config, new CLIConsole());
-    return await agent.run(window.location.href);
+    return await trace_analysis_impl(window.location.href, new TraceProcessorImpl(), config, new VerboseLoggerImpl());
   }
 
   handleYesClick = async () => {
     this.setState({ status: 'analyzing' });
     try {
       const result = await this.traceAnalysis();
-      if (result.finalResult) {
+      if (result.length <= 0) {
+        throw new Error('Analysis failed, llm ouput is empty');
+      } else {
+        const finalResult = generate_markdown_doc(result);
         this.setState({ 
           status: 'completed',
-          analysisResult: result.finalResult
+          analysisResult: finalResult
         });
-      } else {
-        throw new Error('分析请求失败');
       }
     } catch (error) {
       console.error('AI分析请求失败:', error);
@@ -115,7 +137,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
   };
 
   handleNoClick = () => {
-    // 用户点击"否"则无任何响应
+    lynxPerfGlobals.closeRightSidebar();
   };
 
   renderContent = () => {

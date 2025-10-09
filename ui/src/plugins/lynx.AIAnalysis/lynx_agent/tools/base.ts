@@ -1,3 +1,5 @@
+import {VerboseLogger} from '../utils/cli/verbose_logger';
+
 // Type aliases
 type ParamSchemaValue = string | string[] | boolean | Record<string, any>;
 type Property = Record<string, ParamSchemaValue>;
@@ -215,10 +217,18 @@ export abstract class Tool {
  */
 export class ToolExecutor {
   private _tools: Tool[];
+  private _agent_name: string;
   private _tool_map: Record<string, Tool> | null = null;
+  private _verboseLogger: VerboseLogger | undefined;
 
-  constructor(tools: Tool[]) {
+  constructor(
+    tools: Tool[],
+    agent_name: string,
+    verboseLogger?: VerboseLogger,
+  ) {
     this._tools = tools;
+    this._agent_name = agent_name;
+    this._verboseLogger = verboseLogger;
   }
 
   async close_tools(): Promise<void[]> {
@@ -254,6 +264,9 @@ export class ToolExecutor {
      */
     const normalized_name = this._normalize_name(tool_call.name);
     if (!(normalized_name in this.tools)) {
+      this._verboseLogger?.debug(
+        `[${this._agent_name}] Tool '${tool_call.name}' not found. Available tools: ${this._tools.map((tool) => tool.name)}`,
+      );
       return {
         name: tool_call.name,
         success: false,
@@ -267,6 +280,19 @@ export class ToolExecutor {
 
     try {
       const tool_exec_result = await tool.execute(tool_call.arguments || {});
+
+      let result_str = '';
+      if (tool_exec_result.error_code === 0) {
+        result_str = tool_exec_result.output || '';
+      } else {
+        result_str = tool_exec_result.error || '';
+      }
+
+      this._verboseLogger?.debug(
+        `[${this._agent_name}] Tool '${tool_call.name}' executed with arguments ${JSON.stringify(
+          tool_call.arguments,
+        )} , result: ${result_str}`,
+      );
       return {
         name: tool_call.name,
         success: (tool_exec_result.error_code || 0) === 0,

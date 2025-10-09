@@ -48,5 +48,6 @@ export interface LLMResponse {
   usage?: LLMUsage | null;
   model?: string | null;
   finish_reason?: string | null;
+  reasoning_content?: string | null;
   tool_calls?: ToolCall[] | null;
 }

@@ -2,12 +2,11 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
-
-import { spawn, ChildProcess } from 'child_process';
+import {spawn, ChildProcess} from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { TraceProcessorException } from './exceptions';
+import {TraceProcessorException} from './exceptions';
 
 // Default port that trace_processor_shell runs on
 const TP_PORT = 9001;
@@ -31,9 +30,8 @@ export async function loadShell(
   ingestFtraceInRaw: boolean = true,
   enableDevFeatures: boolean = false,
   loadTimeout: number = 2,
-  extraFlags: string[] = []
+  extraFlags: string[] = [],
 ): Promise<ShellLoadResult> {
-  
   // Get available port
   const port = uniquePort ? await getAvailablePort() : TP_PORT;
   const addr = '127.0.0.1';
@@ -41,18 +39,18 @@ export async function loadShell(
 
   // Get shell path
   const shellPath = getShellPath(binPath);
-  
+
   // Build command arguments
   const args = ['-D', '--http-port', port.toString()];
-  
+
   if (!ingestFtraceInRaw) {
     args.push('--no-ftrace-raw');
   }
-  
+
   if (enableDevFeatures) {
     args.push('--dev');
   }
-  
+
   if (extraFlags.length > 0) {
     args.push(...extraFlags);
   }
@@ -60,20 +58,20 @@ export async function loadShell(
   // Start the subprocess
   const subprocess = spawn(shellPath, args, {
     stdio: verbose ? 'inherit' : 'pipe',
-    detached: false
+    detached: false,
   });
 
   // Wait for the server to be ready
   const success = await waitForServer(url, loadTimeout);
-  
+
   if (!success) {
     subprocess.kill();
     throw new TraceProcessorException(
-      `Failed to start trace processor shell at ${url} within ${loadTimeout} seconds`
+      `Failed to start trace processor shell at ${url} within ${loadTimeout} seconds`,
     );
   }
 
-  return { url, subprocess };
+  return {url, subprocess};
 }
 
 /**
@@ -97,7 +95,7 @@ function getShellPath(binPath?: string): string {
 
   // Add platform-specific extensions
   const extensions = os.platform() === 'win32' ? ['.exe', ''] : [''];
-  
+
   for (const basePath of possiblePaths) {
     for (const ext of extensions) {
       const fullPath = basePath + ext;
@@ -108,7 +106,7 @@ function getShellPath(binPath?: string): string {
   }
 
   throw new TraceProcessorException(
-    'trace_processor_shell binary not found. Please specify binPath in config.'
+    'trace_processor_shell binary not found. Please specify binPath in config.',
   );
 }
 
@@ -118,7 +116,7 @@ function getShellPath(binPath?: string): string {
 async function getAvailablePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const server = require('net').createServer();
-    
+
     server.listen(0, () => {
       const port = server.address()?.port;
       server.close(() => {
@@ -129,7 +127,7 @@ async function getAvailablePort(): Promise<number> {
         }
       });
     });
-    
+
     server.on('error', reject);
   });
 }
@@ -137,29 +135,32 @@ async function getAvailablePort(): Promise<number> {
 /**
  * Wait for the trace processor server to be ready.
  */
-async function waitForServer(url: string, timeoutSeconds: number): Promise<boolean> {
+async function waitForServer(
+  url: string,
+  timeoutSeconds: number,
+): Promise<boolean> {
   const startTime = Date.now();
   const timeoutMs = timeoutSeconds * 1000;
-  
+
   while (Date.now() - startTime < timeoutMs) {
     try {
       // Use dynamic fetch to avoid import issues
       const fetch = (globalThis as any).fetch || eval('require')('node-fetch');
       const response = await fetch(`${url}/status`, {
         method: 'GET',
-        timeout: 1000
+        timeout: 1000,
       });
-      
+
       if (response.ok) {
         return true;
       }
     } catch (error) {
       // Server not ready yet, continue waiting
     }
-    
+
     // Wait 100ms before next attempt
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  
+
   return false;
 }

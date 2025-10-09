@@ -1,4 +1,5 @@
-import {CLIConsole} from '../utils/cli/cli_console';
+import {TraceQuery} from '../tools/trace_query';
+import {VerboseLogger} from '../utils/cli/verbose_logger';
 import {AgentConfig} from '../utils/config';
 import {LynxAgent} from './lynx_agent';
 
@@ -9,17 +10,27 @@ export class Agent {
   private agent: LynxAgent;
   private agentConfig: AgentConfig;
 
-  constructor(config: AgentConfig, cliConsole?: CLIConsole | undefined) {
+  constructor(
+    name: string,
+    config: AgentConfig,
+    trace_processor: TraceQuery,
+    verboseLogger: VerboseLogger,
+  ) {
     this.agentConfig = config;
-    this.agent = new LynxAgent(this.agentConfig);
+    this.agent = new LynxAgent(
+      name,
+      this.agentConfig,
+      trace_processor,
+      verboseLogger,
+    );
 
-    this.agent.setCLIConsole(cliConsole);
+    // this.agent.setCLIConsole(cliConsole);
   }
 
   /**
    * Run the agent with a given task.
    */
-  async run(task: string): Promise<any> {
+  async run(task: string): Promise<string> {
     this.agent.newTask(task);
     return await this.agent.executeTask();
   }

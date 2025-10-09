@@ -2,14 +2,13 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
-
-import { ChildProcess } from 'child_process';
+import {ChildProcess} from 'child_process';
 import * as fs from 'fs';
-import { TraceProcessorConfig } from './config';
-import { TraceProcessorException } from './exceptions';
-import { QueryResultIterator, Row } from './query-result-iterator';
-import { TraceProcessorHttpClient } from './http';
-import { loadShell } from './shell';
+import {TraceProcessorConfig} from './config';
+import {TraceProcessorException} from './exceptions';
+import {QueryResultIterator, Row} from './query-result-iterator';
+import {TraceProcessorHttpClient} from './http';
+import {loadShell} from './shell';
 
 /**
  * Reference to a trace that can be loaded.
@@ -31,7 +30,7 @@ export class TraceProcessor {
 
   /**
    * Create a new TraceProcessor instance.
-   * 
+   *
    * @param trace Trace file path, Buffer, or stream
    * @param addr Optional address to connect to existing instance
    * @param config Configuration options
@@ -42,19 +41,19 @@ export class TraceProcessor {
     trace?: TraceReference,
     addr?: string,
     config: TraceProcessorConfig = new TraceProcessorConfig(),
-    filePath?: string // deprecated parameter for compatibility
+    filePath?: string, // deprecated parameter for compatibility
   ): Promise<TraceProcessor> {
     if (trace && filePath) {
       throw new TraceProcessorException(
-        'trace and filePath cannot both be specified.'
+        'trace and filePath cannot both be specified.',
       );
     }
 
     const tp = new TraceProcessor(config);
-    
+
     // Initialize HTTP client
     await tp.initializeHttp(addr);
-    
+
     // Load trace if provided
     if (trace || filePath) {
       await tp.parseTrace(trace || filePath!);
@@ -67,15 +66,13 @@ export class TraceProcessor {
    * Constructor for TraceProcessor.
    * Note: For proper async initialization, use TraceProcessor.create() instead.
    */
-  constructor(
-    config: TraceProcessorConfig = new TraceProcessorConfig(),
-  ) {
+  constructor(config: TraceProcessorConfig = new TraceProcessorConfig()) {
     this.config = config;
   }
 
   /**
    * Execute a SQL query against the loaded trace.
-   * 
+   *
    * @param sql SQL query string
    * @returns QueryResultIterator for iterating through results
    */
@@ -86,14 +83,14 @@ export class TraceProcessor {
 
     try {
       const response = await this.http.executeQuery(sql);
-      
+
       if (response.error) {
         throw new TraceProcessorException(response.error);
       }
 
       return new QueryResultIterator(
         response.columnNames || [],
-        response.batch ? [response.batch] : []
+        response.batch ? [response.batch] : [],
       );
     } catch (error) {
       if (error instanceof TraceProcessorException) {
@@ -105,7 +102,7 @@ export class TraceProcessor {
 
   /**
    * Compute metrics for the loaded trace.
-   * 
+   *
    * @param metrics Array of metric names to compute
    * @returns Metrics data
    */
@@ -116,7 +113,7 @@ export class TraceProcessor {
 
     try {
       const response = await this.http.computeMetric(metrics);
-      
+
       if (response.error) {
         throw new TraceProcessorException(response.error);
       }
@@ -151,7 +148,7 @@ export class TraceProcessor {
 
     try {
       const response = await this.http.disableAndReadMetatrace();
-      
+
       if (response.error) {
         throw new TraceProcessorException(response.error);
       }
@@ -185,20 +182,22 @@ export class TraceProcessor {
     } else {
       // Start new trace processor instance
       try {
-        const { url, subprocess } = await loadShell(
+        const {url, subprocess} = await loadShell(
           this.config.binPath,
           this.config.uniquePort,
           this.config.verbose,
           this.config.ingestFtraceInRaw,
           this.config.enableDevFeatures,
           this.config.loadTimeout,
-          this.config.extraFlags
+          this.config.extraFlags,
         );
-        
+
         this.http = new TraceProcessorHttpClient(url);
         this.subprocess = subprocess;
       } catch (error) {
-        throw new TraceProcessorException(`Failed to start trace processor: ${error}`);
+        throw new TraceProcessorException(
+          `Failed to start trace processor: ${error}`,
+        );
       }
     }
   }
@@ -217,44 +216,44 @@ export class TraceProcessor {
         if (!fs.existsSync(trace)) {
           throw new TraceProcessorException(`Trace file not found: ${trace}`);
         }
-        
+
         await this.http.parse({
           source: 'FILE',
-          file: trace
+          file: trace,
         });
       } else if (Buffer.isBuffer(trace)) {
         // Buffer data - write to temp file first
         const tempFile = `/tmp/trace_${Date.now()}.pftrace`;
         fs.writeFileSync(tempFile, trace);
-        
+
         await this.http.parse({
           source: 'FILE',
-          file: tempFile
+          file: tempFile,
         });
-        
+
         // Clean up temp file
         fs.unlinkSync(tempFile);
       } else {
         // Stream - read chunks and send them
         const chunks: Buffer[] = [];
-        
+
         for await (const chunk of trace) {
           chunks.push(Buffer.from(chunk));
         }
-        
+
         const data = Buffer.concat(chunks);
         const tempFile = `/tmp/trace_${Date.now()}.pftrace`;
         fs.writeFileSync(tempFile, data);
-        
+
         await this.http.parse({
           source: 'FILE',
-          file: tempFile
+          file: tempFile,
         });
-        
+
         // Clean up temp file
         fs.unlinkSync(tempFile);
       }
-      
+
       // Notify that parsing is complete
       await this.http.notifyEof();
     } catch (error) {
