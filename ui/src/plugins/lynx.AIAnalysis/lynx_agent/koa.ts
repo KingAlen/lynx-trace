@@ -12,11 +12,14 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as https from 'https';
 import * as http from 'http';
+import * as crypto from 'crypto';
 import {URL} from 'url';
 import {v4 as uuidv4} from 'uuid';
-import {VerboseLogger} from './utils/cli/verbose_logger';
+import {VerboseLogger} from './utils/interface/verbose_logger';
 import {trace_analysis_impl} from './trace_analysis_impl';
 import {generate_feishu_doc} from './utils/feishu_doc';
+import {OverviewChart} from './utils/interface/overview_chart';
+import {pipelineOverviewCharts} from './utils/pipeline_overview_chart';
 
 export interface TraceAnalysisRequest {
   trace_url: string;
@@ -86,13 +89,19 @@ const trace_analysis = async (request: TraceAnalysisRequest) => {
     },
     tools: [],
   };
+  const logger = new VerboseLoggerImpl(request.verbose);
   const trace_analysis_results = await trace_analysis_impl(
     request.trace_url,
     new TraceProcessorImpl(),
     agent_config,
-    new VerboseLoggerImpl(request.verbose),
+    logger,
+    new OverviewChartImpl(),
   );
-  const feishu_doc = generate_feishu_doc(trace_analysis_results);
+  const feishu_doc = await generate_feishu_doc(
+    request,
+    trace_analysis_results,
+    logger,
+  );
   return feishu_doc;
 };
 
@@ -101,7 +110,7 @@ class TraceProcessorImpl implements TraceQuery {
 
   async initProcessor(_trace_url: string): Promise<void> {
     // Determine the correct binary path based on the current system
-    const binPath = this.getBinaryPath();
+    const binPath = await this.getBinaryPath();
 
     // Initialize the trace processor with the determined binary path
     const config = new TraceProcessorConfig({
@@ -117,21 +126,126 @@ class TraceProcessorImpl implements TraceQuery {
     this.tp = await TraceProcessor.create(traceFile, undefined, config);
   }
 
-  private getBinaryPath(): string {
-    const platform = os.platform();
+  private async getBinaryPath(): Promise<string> {
+    const trace_processor_shell = {
+      darwin: {
+        url: 'https://tosv.byted.org/obj/lynx-testing/trace_processor_shell_v50_mac_arm64',
+        sha256:
+          'f8a545f177853ef459e9b799bb1980db7a7a77e156de8d9fe61ff006175563bb',
+      },
+      linux: {
+        url: 'https://tosv.byted.org/obj/lynx-testing/trace_processor_shell_v50_linux_amd64',
+        sha256:
+          '5024f2bf0d3324d3a80b49a44ac3e1fa680890946765586dc6fac7a5fdf66173',
+      },
+    };
 
-    let binaryName: string;
+    const platform = os.platform();
+    let config: {url: string; sha256: string};
+
     if (platform === 'darwin') {
-      // macOS
-      binaryName = 'trace_processor_shell_v50_mac_arm64';
+      config = trace_processor_shell.darwin;
     } else if (platform === 'linux') {
-      binaryName = 'trace_processor_shell_v50_linux_amd64';
+      config = trace_processor_shell.linux;
     } else {
-      // Default fallback
-      binaryName = 'trace_processor_shell_v50_linux_amd64';
+      // Default fallback to linux
+      config = trace_processor_shell.linux;
     }
 
-    return path.join(__dirname, 'resources', binaryName);
+    // Generate local file path in tmp directory
+    const fileName = path.basename(config.url);
+    const localPath = path.join(os.tmpdir(), 'lynx-trace', fileName);
+
+    // Check if file already exists and has correct SHA256
+    if (await this.fileExistsAndValid(localPath, config.sha256)) {
+      return localPath;
+    }
+
+    // Download file from remote URL
+    await this.downloadBinary(config.url, localPath, config.sha256);
+
+    return localPath;
+  }
+
+  private async fileExistsAndValid(
+    filePath: string,
+    expectedSha256: string,
+  ): Promise<boolean> {
+    try {
+      if (!fs.existsSync(filePath)) {
+        return false;
+      }
+
+      const fileBuffer = fs.readFileSync(filePath);
+      const hash = crypto.createHash('sha256');
+      hash.update(fileBuffer);
+      const actualSha256 = hash.digest('hex');
+
+      return actualSha256 === expectedSha256;
+    } catch (error) {
+      console.error('Error checking file validity:', error);
+      return false;
+    }
+  }
+
+  private async downloadFile(url: string, filePath: string): Promise<void> {
+    // Ensure directory exists
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, {recursive: true});
+    }
+
+    const file = fs.createWriteStream(filePath);
+
+    return new Promise((resolve, reject) => {
+      const request = url.startsWith('https:') ? https : http;
+
+      request
+        .get(url, (response) => {
+          if (response.statusCode === 200) {
+            response.pipe(file);
+            file.on('finish', () => {
+              file.close();
+              resolve();
+            });
+          } else {
+            reject(new Error(`Failed to download: ${response.statusCode}`));
+          }
+        })
+        .on('error', (err) => {
+          fs.unlink(filePath, () => {}); // Delete the file on error
+          reject(err);
+        });
+    });
+  }
+
+  private async downloadBinary(
+    url: string,
+    localPath: string,
+    expectedSha256: string,
+  ): Promise<void> {
+    await this.downloadFile(url, localPath);
+
+    // Verify SHA256
+    try {
+      const fileBuffer = fs.readFileSync(localPath);
+      const hash = crypto.createHash('sha256');
+      hash.update(fileBuffer);
+      const actualSha256 = hash.digest('hex');
+
+      if (actualSha256 !== expectedSha256) {
+        fs.unlinkSync(localPath); // Remove invalid file
+        throw new Error(
+          `SHA256 mismatch. Expected: ${expectedSha256}, Got: ${actualSha256}`,
+        );
+      }
+
+      // Make file executable
+      fs.chmodSync(localPath, 0o755);
+    } catch (error) {
+      fs.unlink(localPath, () => {}); // Clean up on error
+      throw new Error(`Error verifying downloaded file: ${error}`);
+    }
   }
 
   private getTraceUrl(url: string): string {
@@ -183,28 +297,7 @@ class TraceProcessorImpl implements TraceQuery {
 
   private async downloadTrace(url: string): Promise<void> {
     const filePath = this.traceTmpPath(url);
-    const file = fs.createWriteStream(filePath);
-
-    return new Promise((resolve, reject) => {
-      const request = url.startsWith('https:') ? https : http;
-
-      request
-        .get(url, (response) => {
-          if (response.statusCode === 200) {
-            response.pipe(file);
-            file.on('finish', () => {
-              file.close();
-              resolve();
-            });
-          } else {
-            reject(new Error(`Failed to download: ${response.statusCode}`));
-          }
-        })
-        .on('error', (err) => {
-          fs.unlink(filePath, () => {}); // Delete the file on error
-          reject(err);
-        });
-    });
+    await this.downloadFile(url, filePath);
   }
 
   private async downloadTraceFile(url: string): Promise<string> {
@@ -268,29 +361,40 @@ class VerboseLoggerImpl implements VerboseLogger {
   debug(message: string): void {
     if (this.verbose) {
       this.writeToFile(`DEBUG: ${message}`);
+      console.debug(`DEBUG: ${message}`);
     }
   }
 
   info(message: string): void {
     this.writeToFile(`INFO: ${message}`);
+    console.info(`INFO: ${message}`);
   }
 
   warning(message: string): void {
     this.writeToFile(`WARNING: ${message}`);
+    console.warn(`WARNING: ${message}`);
   }
 
   error(message: string): void {
     this.writeToFile(`ERROR: ${message}`);
+    console.error(`ERROR: ${message}`);
   }
 
   verbose_debug(message: string): void {
     if (this.verbose) {
       this.writeToFile(`VERBOSE: ${message}`);
+      console.debug(`VERBOSE: ${message}`);
     }
   }
 
   get_log_file_path(): string | undefined {
     return this.logFile;
+  }
+}
+
+class OverviewChartImpl implements OverviewChart {
+  async generateCharts(traceResult: any): Promise<string[]> {
+    return await pipelineOverviewCharts(traceResult);
   }
 }
 

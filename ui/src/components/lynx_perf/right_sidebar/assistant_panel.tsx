@@ -11,9 +11,10 @@ import { generate_markdown_doc } from '../../../plugins/lynx.AIAnalysis/lynx_age
 import AIAnalysis from '../../../plugins/lynx.AIAnalysis';
 import { AgentConfig } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/config';
 import { QueryResult, SqlValue } from '../../../trace_processor/query_result';
-import { VerboseLogger } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/cli/verbose_logger';
+import { VerboseLogger } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/interface/verbose_logger';
 import { trace_analysis_impl } from '../../../plugins/lynx.AIAnalysis/lynx_agent/trace_analysis_impl';
 import { lynxPerfGlobals } from '../../../lynx_perf/lynx_perf_globals';
+import { OverviewChart } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/interface/overview_chart';
 
 
 interface TraceAssistantPanelState {
@@ -86,6 +87,12 @@ class VerboseLoggerImpl implements VerboseLogger {
   }
 }
 
+class OverviewChartImpl implements OverviewChart {
+  async generateCharts(_traceResult: any): Promise<string[]> {
+    return [];
+  }
+}
+
 export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState> {
   constructor(props: {}) {
     super(props);
@@ -111,7 +118,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       },
       tools: [],
     }
-    return await trace_analysis_impl(window.location.href, new TraceProcessorImpl(), config, new VerboseLoggerImpl());
+    return await trace_analysis_impl(window.location.href, new TraceProcessorImpl(), config, new VerboseLoggerImpl(), new OverviewChartImpl());
   }
 
   handleYesClick = async () => {
@@ -128,10 +135,10 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
         });
       }
     } catch (error) {
-      console.error('AI分析请求失败:', error);
+      console.error('AI analysis request failed:', error);
       this.setState({ 
         status: 'completed',
-        analysisResult: '分析失败，请稍后重试。'
+        analysisResult: 'Analysis failed, please try again later.'
       });
     }
   };
@@ -147,17 +154,17 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       case 'initial':
         return (
           <div style={{ padding: '16px' }}>
-            <p>是否需要对当前 Trace 进行 AI 分析？</p>
+            <p>Do you need to perform AI analysis on the current Trace?</p>
             <div style={{ marginTop: '12px' }}>
               <Button 
                 type="primary" 
                 onClick={this.handleYesClick}
                 style={{ marginRight: '8px' }}
               >
-                是
+                Yes
               </Button>
               <Button onClick={this.handleNoClick}>
-                否
+                No
               </Button>
             </div>
           </div>
@@ -168,7 +175,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
           <div style={{ padding: '16px', textAlign: 'center' }}>
             <Spin size="large" />
             <p style={{ marginTop: '12px' }}>
-              分析进行中，预计3-5分钟完成，返回结果会展示在当前页面。
+              Analysis in progress, expected to complete in 3-5 minutes. The results will be displayed on the current page.
             </p>
           </div>
         );
@@ -182,7 +189,20 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
              borderRadius: '4px'
            }}>
              <div style={{ padding: '16px' }}>
-               <Markdown>{analysisResult}</Markdown>
+               <Markdown 
+                 components={{
+                   h3: ({children}) => (
+                     <h3 style={{
+                       fontSize: '18px',
+                       fontWeight: '700',
+                     }}>
+                       {children}
+                     </h3>
+                   )
+                 }}
+               >
+                 {analysisResult}
+               </Markdown>
              </div>
            </div>
          );
@@ -194,7 +214,11 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
 
   render() {
     return (
-      <div className="trace-assistant-panel">
+      <div style={{
+        backgroundColor: '#F2F2F3',
+        width: '100%',
+        height: '100%',
+      }}>
         {this.renderContent()}
       </div>
     );

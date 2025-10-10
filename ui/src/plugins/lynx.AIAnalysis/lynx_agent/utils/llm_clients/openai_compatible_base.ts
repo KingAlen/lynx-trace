@@ -103,7 +103,6 @@ export class OpenAICompatibleClient extends BaseLLMClient {
       modelConfig.model.includes(model),
     );
 
-    console.log('input messages: ', JSON.stringify(this.messageHistory));
     return await this.client.chat.completions.create({
       model: modelConfig.model,
       messages: this.messageHistory,
@@ -158,7 +157,6 @@ export class OpenAICompatibleClient extends BaseLLMClient {
     );
 
     const choice = response.choices[0];
-    console.log('get response back: ' + JSON.stringify(choice));
 
     const toolCalls: ToolCall[] = [];
     if (choice.message.tool_calls) {
@@ -178,6 +176,8 @@ export class OpenAICompatibleClient extends BaseLLMClient {
       content: choice.message.content || '',
       tool_calls: toolCalls,
       finish_reason: choice.finish_reason,
+      // @ts-ignore only some of the LLM can return the reasoning_content
+      reasoning_content: choice.message.reasoning_content || '',
       model: response.model,
       usage: response.usage
         ? new LLMUsage(

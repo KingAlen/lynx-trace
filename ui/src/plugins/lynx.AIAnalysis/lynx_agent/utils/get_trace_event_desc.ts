@@ -1,3 +1,5 @@
+import {eventDescriptionList} from '../resources/description';
+
 // 缓存变量
 let eventDocsMap: Record<string, string> | null = null;
 let isLoading = false;
@@ -11,18 +13,18 @@ let loadPromise: Promise<void> | null = null;
 export async function getTraceEventDesc(
   eventName: string,
 ): Promise<string | null> {
-  // 如果缓存已存在，直接返回
+  // if cache exists, return directly
   if (eventDocsMap !== null) {
     return eventDocsMap[eventName] || null;
   }
 
-  // 如果正在加载，等待加载完成
+  // if loading, wait for loading to finish
   if (isLoading && loadPromise) {
     await loadPromise;
     return eventDocsMap ? eventDocsMap[eventName] || null : null;
   }
 
-  // 开始加载
+  // start loading
   isLoading = true;
   loadPromise = loadEventDocsMap();
   await loadPromise;
@@ -31,23 +33,10 @@ export async function getTraceEventDesc(
   return eventDocsMap ? eventDocsMap[eventName] || null : null;
 }
 
-/**
- * 加载事件文档映射
- */
 async function loadEventDocsMap(): Promise<void> {
   try {
-    // 构建资源文件URL路径（相对于当前页面）
-    const jsonUrl = '../resources/description.json';
-
-    const response = await fetch(jsonUrl);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const docsList = await response.json();
-
     const docsMap: Record<string, string> = {};
-    for (const item of docsList) {
+    for (const item of eventDescriptionList) {
       if (item.name && item.description) {
         docsMap[item.name] = item.description;
       }

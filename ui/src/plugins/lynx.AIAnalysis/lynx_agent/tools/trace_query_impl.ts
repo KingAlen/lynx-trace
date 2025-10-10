@@ -179,7 +179,7 @@ export class TraceQueryTool extends Tool {
   }
 
   async execute(args: ToolCallArguments): Promise<ToolExecResult> {
-    return this.runSQLQuery(args);
+    return await this.runSQLQuery(args);
   }
 
   async runSQLQuery(args: ToolCallArguments): Promise<ToolExecResult> {
@@ -270,7 +270,7 @@ export class TraceQueryTool extends Tool {
             error_code: -1,
           };
         }
-        const result = this._recursiveQuery(slice_id, mode, limit);
+        const result = await this._recursiveQuery(slice_id, mode, limit);
         return {
           output: JSON.stringify({'trace_query 查询结果': result}),
         };
@@ -428,21 +428,21 @@ export class TraceQueryTool extends Tool {
           }
           trace_event.push(event);
         }
-        const trace_event_desc: any[] = [];
-        for (const name of name_set) {
-          const desc = await getTraceEventDesc(name);
-          if (desc) {
-            trace_event_desc.push({
-              name: name,
-              desc: desc,
-            });
-          }
-        }
+        // const trace_event_desc: any[] = [];
+        // for (const name of name_set) {
+        //   const desc = await getTraceEventDesc(name);
+        //   if (desc) {
+        //     trace_event_desc.push({
+        //       name: name,
+        //       desc: desc,
+        //     });
+        //   }
+        // }
         return {
           output: JSON.stringify({
             'trace_query 查询结果': {
               'Trace 事件列表': trace_event,
-              'Trace 事件对应的描述': trace_event_desc,
+              // 'Trace 事件对应的描述': trace_event_desc,
             },
           }),
         };

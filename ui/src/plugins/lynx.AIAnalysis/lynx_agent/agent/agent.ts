@@ -1,5 +1,5 @@
 import {TraceQuery} from '../tools/trace_query';
-import {VerboseLogger} from '../utils/cli/verbose_logger';
+import {VerboseLogger} from '../utils/interface/verbose_logger';
 import {AgentConfig} from '../utils/config';
 import {LynxAgent} from './lynx_agent';
 
@@ -23,8 +23,6 @@ export class Agent {
       trace_processor,
       verboseLogger,
     );
-
-    // this.agent.setCLIConsole(cliConsole);
   }
 
   /**

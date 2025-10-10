@@ -1,4 +1,4 @@
-[
+export const eventDescriptionList = [
   {
     "name": "RV Prefetch",
     "description": "Android RecyclerView is attempting to pre-populate off screen views."

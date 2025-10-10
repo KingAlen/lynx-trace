@@ -38,37 +38,36 @@ export class TraceProcessorHttpClient {
       sqlQuery: sql,
     });
 
-    const requestBuffer =
-      protos.perfetto.protos.QueryArgs.encode(queryArgs).finish();
-
-    const response = await fetch(`${this.baseUrl}/query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-protobuf',
-      },
-      body: requestBuffer,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Query failed: ${response.statusText}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const responseBuffer = new Uint8Array(arrayBuffer);
-
-    if (responseBuffer.length === 0) {
-      throw new Error('Empty response from server');
-    }
-
     try {
+      const requestBuffer =
+        protos.perfetto.protos.QueryArgs.encode(queryArgs).finish();
+
+      const response = await fetch(`${this.baseUrl}/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-protobuf',
+        },
+        body: requestBuffer,
+      });
+
+      if (!response.ok) {
+        throw new Error(`${response.statusText}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const responseBuffer = new Uint8Array(arrayBuffer);
+
+      if (responseBuffer.length === 0) {
+        throw new Error('Empty response from server');
+      }
       const queryResult =
         protos.perfetto.protos.QueryResult.decode(responseBuffer);
       if (queryResult.error) {
-        throw new Error(`Query error: ${queryResult.error}`);
+        throw new Error(`${queryResult.error}`);
       }
       return queryResult;
     } catch (error) {
-      throw new Error(`Failed to decode query response: ${error}`);
+      throw new Error(`execute trace query failed: ${error}`);
     }
   }
 

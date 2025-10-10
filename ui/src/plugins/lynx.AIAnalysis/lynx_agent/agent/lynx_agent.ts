@@ -45,7 +45,7 @@ enum AgentStepState {
 import {Tool, ToolCall, ToolExecutor, ToolResult} from '../tools/base';
 import {TraceQuery} from '../tools/trace_query';
 import {TraceQueryTool} from '../tools/trace_query_impl';
-import {VerboseLogger} from '../utils/cli/verbose_logger';
+import {VerboseLogger} from '../utils/interface/verbose_logger';
 import {AgentConfig, ModelConfig} from '../utils/config';
 import {LLMMessage, LLMResponse} from '../utils/llm_clients/llm_basics';
 import {LLMClient} from '../utils/llm_clients/llm_client';
@@ -266,7 +266,6 @@ export class LynxAgent {
       );
 
       while (stepNumber <= this._maxSteps) {
-        console.log('stepNumber', stepNumber);
         step = new AgentStep({stepNumber, state: AgentStepState.THINKING});
         try {
           messages = await this._runLLMStep(step, messages, execution);
@@ -302,15 +301,7 @@ export class LynxAgent {
 
     execution.executionTime = Date.now() - startTime;
 
-    // this._updateCLIConsole(step, execution);
-
     return execution.finalResult || '';
-    // return {
-    //   success: execution.success || false,
-    //   finalResult: execution.finalResult || '',
-    //   task: execution.task || '',
-    //   steps: execution.steps || [],
-    // };
   }
 
   private async _closeTools(): Promise<any> {
@@ -374,17 +365,6 @@ export class LynxAgent {
     execution.steps.push(step);
   }
 
-  // private _updateCLIConsole(
-  //   _step?: AgentStep | null,
-  //   _agentExecution?: AgentExecution | null,
-  // ): void {
-  //   if (this.cliConsole && _step) {
-  //     this.cliConsole.log(
-  //       'Step: ' + _step.stepNumber + ' State: ' + _step.state,
-  //     );
-  //   }
-  // }
-
   private _updateLLMUsage(
     llmResponse: LLMResponse,
     execution: AgentExecution,
@@ -418,7 +398,6 @@ export class LynxAgent {
 
     step.state = AgentStepState.CALLING_TOOL;
     step.toolCalls = toolCalls;
-    // this._updateCLIConsole(step);
 
     let toolResults: ToolResult[];
     if (this._modelConfig.parallel_tool_calls) {
@@ -428,7 +407,6 @@ export class LynxAgent {
     }
 
     step.toolResults = toolResults;
-    // this._updateCLIConsole(step);
 
     for (const toolResult of toolResults) {
       // Add tool result to conversation

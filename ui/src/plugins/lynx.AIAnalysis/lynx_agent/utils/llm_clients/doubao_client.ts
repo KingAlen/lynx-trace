@@ -11,8 +11,6 @@ export class DoubaoProvider implements ProviderConfig {
     baseUrl: string | null,
     _apiVersion: string | null,
   ): OpenAI {
-    console.log('base url:', baseUrl);
-    console.log('apiKey: ', apiKey);
     /**
      * Create OpenAI client with Doubao base URL.
      */

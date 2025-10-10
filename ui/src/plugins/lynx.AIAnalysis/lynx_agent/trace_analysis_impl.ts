@@ -1,8 +1,9 @@
 import {Agent} from './agent/agent';
 import {TraceQuery} from './tools/trace_query';
-import {VerboseLogger} from './utils/cli/verbose_logger';
+import {VerboseLogger} from './utils/interface/verbose_logger';
 import {AgentConfig} from './utils/config';
 import {overviewTraceImpl, OverviewTraceResult} from './utils/overview_trace';
+import {OverviewChart} from './utils/interface/overview_chart';
 
 export interface TraceAnalysisResult {
   stage_one_results: string[];
@@ -16,6 +17,7 @@ export async function trace_analysis_impl(
   trace_processor: TraceQuery,
   agent_config: AgentConfig,
   verboseLogger: VerboseLogger,
+  overviewChart: OverviewChart,
 ): Promise<TraceAnalysisResult[]> {
   try {
     await trace_processor.initProcessor(trace_url);
@@ -28,6 +30,7 @@ export async function trace_analysis_impl(
           trace_processor,
           agent_config,
           verboseLogger,
+          overviewChart,
         ),
       );
     }
@@ -42,6 +45,7 @@ async function lynxview_trace_analysis(
   trace_processor: TraceQuery,
   agent_config: AgentConfig,
   verboseLogger: VerboseLogger,
+  overviewChart: OverviewChart,
 ): Promise<TraceAnalysisResult> {
   const stage_one_results: Promise<string>[] = [];
   if (item.timing_flags_crop.length > 0) {
@@ -53,7 +57,7 @@ async function lynxview_trace_analysis(
         verboseLogger,
       );
       stage_one_results.push(
-        agent.run('待分析的 Trace: ' + JSON.stringify(pipline)),
+        agent.run('Analyze the following trace: ' + JSON.stringify(pipline)),
       );
     }
   }
@@ -64,7 +68,7 @@ async function lynxview_trace_analysis(
   const bundle_url = item.bundle_url;
   return {
     stage_one_results: stage_one_results_str,
-    overview_trace_chart_urls: [],
+    overview_trace_chart_urls: await overviewChart.generateCharts(item),
     timing_flags: timing_flags_all,
     bundle_url: bundle_url,
   };

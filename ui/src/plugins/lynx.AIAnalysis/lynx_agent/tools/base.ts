@@ -1,4 +1,4 @@
-import {VerboseLogger} from '../utils/cli/verbose_logger';
+import {VerboseLogger} from '../utils/interface/verbose_logger';
 
 // Type aliases
 type ParamSchemaValue = string | string[] | boolean | Record<string, any>;
@@ -281,18 +281,14 @@ export class ToolExecutor {
     try {
       const tool_exec_result = await tool.execute(tool_call.arguments || {});
 
-      let result_str = '';
-      if (tool_exec_result.error_code === 0) {
-        result_str = tool_exec_result.output || '';
-      } else {
-        result_str = tool_exec_result.error || '';
-      }
-
+      const result_str =
+        tool_exec_result.output || tool_exec_result.error || '';
       this._verboseLogger?.debug(
         `[${this._agent_name}] Tool '${tool_call.name}' executed with arguments ${JSON.stringify(
           tool_call.arguments,
         )} , result: ${result_str}`,
       );
+
       return {
         name: tool_call.name,
         success: (tool_exec_result.error_code || 0) === 0,
