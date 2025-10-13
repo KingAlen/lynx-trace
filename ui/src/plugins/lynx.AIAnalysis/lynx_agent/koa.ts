@@ -336,12 +336,10 @@ class VerboseLoggerImpl implements VerboseLogger {
     const id = uuidv4();
     const loggerName = `message_${id}`;
 
-    // 文件处理器（如果指定了日志文件）
     if (verbose) {
       const tmpDir = os.tmpdir();
       this.logFile = path.join(tmpDir, `${loggerName}_${Date.now()}.log`);
 
-      // 确保日志目录存在
       const logDir = path.dirname(this.logFile);
       if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, {recursive: true});

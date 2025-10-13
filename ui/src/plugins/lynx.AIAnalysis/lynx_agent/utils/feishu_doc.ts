@@ -4,9 +4,10 @@ import {v4 as uuidv4} from 'uuid';
 import * as fs from 'fs';
 import {TraceAnalysisRequest} from '../koa';
 import {uploadFileToTos} from './pipeline_overview_chart';
-// Note: axios may need to be installed via npm install axios
-// For now using fetch API as alternative
-// import axios from 'axios';
+
+const FEISHU_DOMAIN = process.env.INNER_USE
+  ? 'fsopen.bytedance.net'
+  : 'open.feishu.cn';
 
 export async function generate_feishu_doc(
   request: TraceAnalysisRequest,
@@ -77,13 +78,12 @@ async function getTenantAccessToken(): Promise<string | null> {
   }
 }
 
-// 增加协作者权限
 async function givePermToEmail(
   documentId: string,
   email: string,
   token: string,
 ): Promise<void> {
-  const url = `https://open.larkoffice.com/open-apis/drive/v1/permissions/${documentId}/members?need_notification=true&type=docx`;
+  const url = `https://${FEISHU_DOMAIN}/open-apis/drive/v1/permissions/${documentId}/members?need_notification=true&type=docx`;
   const headers = {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json; charset=utf-8',
@@ -111,7 +111,7 @@ async function givePermToUnionId(
   unionId: string,
   token: string,
 ): Promise<void> {
-  const url = `https://open.larkoffice.com/open-apis/drive/v1/permissions/${documentId}/members?need_notification=true&type=docx`;
+  const url = `https://${FEISHU_DOMAIN}/open-apis/drive/v1/permissions/${documentId}/members?need_notification=true&type=docx`;
   const headers = {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json; charset=utf-8',
@@ -134,7 +134,6 @@ async function givePermToUnionId(
   }
 }
 
-// 辅助函数：根据 block_id 获取块
 function getBlockById(blocks: any[], blockId: string): any | null {
   for (const block of blocks) {
     if (block.block_id === blockId) {
@@ -144,13 +143,11 @@ function getBlockById(blocks: any[], blockId: string): any | null {
   return null;
 }
 
-// 将 Markdown 内容的内容转换为 Blocks
 async function convertMarkdownToBlock(
   content: string,
   token: string,
 ): Promise<[string[], any[]]> {
-  const url =
-    'https://open.larkoffice.com/open-apis/docx/v1/documents/blocks/convert';
+  const url = `https://${FEISHU_DOMAIN}/open-apis/docx/v1/documents/blocks/convert`;
   const headers = {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json; charset=utf-8',
@@ -170,7 +167,8 @@ async function convertMarkdownToBlock(
 
     // 检查返回结构
     if (respJson.code !== 0 || !respJson.data || !respJson.data.blocks) {
-      console.error('Markdown 内容的内容转换为 blocks 返回内容错误:', respJson);
+      console.error('Markdown convert to blocks error: ', respJson);
+      console.error('Markdown content:', content);
       return [[], []];
     }
 
@@ -191,12 +189,11 @@ async function convertMarkdownToBlock(
   }
 }
 
-// 更新文档权限
 async function updateDocumentPerm(
   documentId: string,
   token: string,
 ): Promise<boolean> {
-  const url = `https://open.larkoffice.com/open-apis/drive/v2/permissions/${documentId}/public?type=docx`;
+  const url = `https://${FEISHU_DOMAIN}/open-apis/drive/v2/permissions/${documentId}/public?type=docx`;
   const headers = {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json; charset=utf-8',
@@ -231,14 +228,13 @@ async function updateDocumentPerm(
   }
 }
 
-// 插入文档内容
 async function insertDocumentContent(
   documentId: string,
   blocks: any[],
   firstLevelBlockIds: string[],
   token: string,
 ): Promise<boolean> {
-  const url = `https://open.larkoffice.com/open-apis/docx/v1/documents/${documentId}/blocks/${documentId}/descendant`;
+  const url = `https://${FEISHU_DOMAIN}/open-apis/docx/v1/documents/${documentId}/blocks/${documentId}/descendant`;
   const headers = {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json; charset=utf-8',
@@ -257,14 +253,13 @@ async function insertDocumentContent(
     });
     const respJson = await response.json();
 
-    // 检查返回结构
     if (respJson.code !== 0) {
-      console.error('插入文档内容异常, 接口返回:', respJson);
+      console.error('insert document content error: ', respJson);
       return false;
     }
     return true;
   } catch (error) {
-    console.error('插入文档内容异常:', error);
+    console.error('insert feishu document content error:', error);
     return false;
   }
 }
@@ -462,7 +457,7 @@ async function createFeishuDocument(
   }
 
   // create document
-  const url = 'https://open.larkoffice.com/open-apis/docx/v1/documents';
+  const url = `https://${FEISHU_DOMAIN}/open-apis/docx/v1/documents`;
   const headers = {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json; charset=utf-8',
@@ -510,7 +505,7 @@ async function createFeishuDocument(
 
     return `https://bytedance.larkoffice.com/docx/${documentId}`;
   } catch (error) {
-    const errorMsg = `create document failed: ${error}`;
+    const errorMsg = `create feishu document failed: ${error}`;
     logger.error(errorMsg);
     return errorMsg;
   }
@@ -543,7 +538,7 @@ async function getDocContent(docUrl: string): Promise<string | null> {
 
   const documentId = docUrl.split('/').pop()!;
   // 获取文档内容 URL
-  const url = `https://open.larkoffice.com/open-apis/docx/v1/documents/${documentId}/raw_content?lang=0`;
+  const url = `https://${FEISHU_DOMAIN}/open-apis/docx/v1/documents/${documentId}/raw_content?lang=0`;
   const headers = {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json; charset=utf-8',
@@ -580,8 +575,7 @@ async function sendMessageToLark(
     return null;
   }
 
-  const url =
-    'https://open.larkoffice.com/open-apis/im/v1/messages?receive_id_type=chat_id';
+  const url = `https://${FEISHU_DOMAIN}/open-apis/im/v1/messages?receive_id_type=chat_id`;
   const headers = {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json; charset=utf-8',

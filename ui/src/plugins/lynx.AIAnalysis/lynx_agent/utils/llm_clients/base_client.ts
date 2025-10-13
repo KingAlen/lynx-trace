@@ -1,6 +1,3 @@
-// Copyright (c) 2025 ByteDance Ltd. and/or its affiliates
-// SPDX-License-Identifier: MIT
-
 import {Tool} from '../../tools/base';
 import {ModelConfig} from '../config';
 import {LLMMessage, LLMResponse} from './llm_basics';
