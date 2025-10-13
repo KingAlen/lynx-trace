@@ -66,7 +66,7 @@ router.post('/chat/message', async (ctx: Koa.DefaultContext) => {
 });
 
 // Health check endpoint
-router.get('/v1/ping', async (ctx) => {
+router.get('/v1/ping', async (ctx: Koa.DefaultContext) => {
   ctx.body = 'ok';
 });
 
