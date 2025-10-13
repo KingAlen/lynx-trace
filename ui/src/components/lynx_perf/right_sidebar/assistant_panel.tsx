@@ -16,6 +16,7 @@ import { trace_analysis_impl } from '../../../plugins/lynx.AIAnalysis/lynx_agent
 import { lynxPerfGlobals } from '../../../lynx_perf/lynx_perf_globals';
 import { OverviewChart } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/interface/overview_chart';
 import { llmState } from '../../../ai_analysis/llm_state';
+import { ReportLanguage } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/interface/language';
 
 
 interface TraceAssistantPanelState {
@@ -123,7 +124,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
 
    traceAnalysis = async () => {
     const llmConfig = this.getLLMConfig();
-     const config : AgentConfig = {
+    const config : AgentConfig = {
       max_steps: 20,
       model: {
         model: llmConfig.modelName,
@@ -137,7 +138,10 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       },
       tools: [],
     }
-    return await trace_analysis_impl(window.location.href, new TraceProcessorImpl(), config, new VerboseLoggerImpl(), new OverviewChartImpl());
+    const reportLanguage: ReportLanguage = {
+      localLanguage: () => llmState.state.reportLanguage,
+    }
+    return await trace_analysis_impl(window.location.href, new TraceProcessorImpl(), config, new VerboseLoggerImpl(), new OverviewChartImpl(), reportLanguage);
   }
 
   handleYesClick = async () => {

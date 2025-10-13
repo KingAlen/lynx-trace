@@ -25,8 +25,14 @@ export interface LLMConfig {
   baseUrl?: string;
 }
 
+export enum ReportLanguage {
+  ENGLISH = 'en',
+  CHINESE = 'zh',
+}
+
 interface State {
   config: LLMConfig;
+  reportLanguage: ReportLanguage;
 }
 
 const emptyState: State = {
@@ -36,6 +42,7 @@ const emptyState: State = {
     apiKey: '',
     baseUrl: '',
   },
+  reportLanguage: ReportLanguage.ENGLISH,
 };
 
 export const llmState = createStore<State>(emptyState);
@@ -43,5 +50,11 @@ export const llmState = createStore<State>(emptyState);
 export function updateLLMConfig(config: LLMConfig) {
   llmState.edit((draft) => {
     Object.assign(draft.config, config);
+  });
+}
+
+export function updateReportLanguage(language: ReportLanguage) {
+  llmState.edit((draft) => {
+    draft.reportLanguage = language;
   });
 }

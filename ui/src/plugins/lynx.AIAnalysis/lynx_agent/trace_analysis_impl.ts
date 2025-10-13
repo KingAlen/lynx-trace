@@ -4,6 +4,7 @@ import {VerboseLogger} from './utils/interface/verbose_logger';
 import {AgentConfig} from './utils/config';
 import {overviewTraceImpl, OverviewTraceResult} from './utils/overview_trace';
 import {OverviewChart} from './utils/interface/overview_chart';
+import {ReportLanguage} from './utils/interface/language';
 
 export interface TraceAnalysisResult {
   stage_one_results: string[];
@@ -18,6 +19,7 @@ export async function trace_analysis_impl(
   agent_config: AgentConfig,
   verboseLogger: VerboseLogger,
   overviewChart: OverviewChart,
+  reportLanguage: ReportLanguage,
 ): Promise<TraceAnalysisResult[]> {
   try {
     await trace_processor.initProcessor(trace_url);
@@ -31,6 +33,7 @@ export async function trace_analysis_impl(
           agent_config,
           verboseLogger,
           overviewChart,
+          reportLanguage,
         ),
       );
     }
@@ -46,6 +49,7 @@ async function lynxview_trace_analysis(
   agent_config: AgentConfig,
   verboseLogger: VerboseLogger,
   overviewChart: OverviewChart,
+  reportLanguage: ReportLanguage,
 ): Promise<TraceAnalysisResult> {
   const stage_one_results: Promise<string>[] = [];
   if (item.timing_flags_crop.length > 0) {
@@ -55,9 +59,10 @@ async function lynxview_trace_analysis(
         agent_config,
         trace_processor,
         verboseLogger,
+        reportLanguage.localLanguage(),
       );
       stage_one_results.push(
-        agent.run('Analyze the following trace: ' + JSON.stringify(pipline)),
+        agent.run('Overview trace events: ' + JSON.stringify(pipline)),
       );
     }
   }

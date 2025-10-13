@@ -15,12 +15,14 @@ export class Agent {
     config: AgentConfig,
     trace_processor: TraceQuery,
     verboseLogger: VerboseLogger,
+    reportLanguage: string,
   ) {
     this.agentConfig = config;
     this.agent = new LynxAgent(
       name,
       this.agentConfig,
       trace_processor,
+      reportLanguage,
       verboseLogger,
     );
   }

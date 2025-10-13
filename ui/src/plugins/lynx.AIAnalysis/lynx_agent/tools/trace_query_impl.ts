@@ -8,7 +8,7 @@ const context_window_size_threshold = 128 * 1024 * 0.8;
 function isNotEmptyJson(jsonStr: string): boolean {
   try {
     const data = JSON.parse(jsonStr);
-    // 检查是否是空字典，或者只有空键值对的字典
+    // Check if the parsed JSON is a non-empty dictionary
     if (
       JSON.stringify(data) === JSON.stringify({'': ''}) ||
       !data ||
@@ -18,12 +18,11 @@ function isNotEmptyJson(jsonStr: string): boolean {
     }
     return true;
   } catch (error) {
-    // 如果不是有效的JSON，也视为需要过滤
+    // If the JSON is not valid, it is also considered as empty
     return false;
   }
 }
 
-// 过滤一些 trace 事件
 const filterTraceEvents = [
   (s: string) => s.startsWith('LynxEngine::Invoke'),
   (s: string) => s.startsWith('LynxRuntime::Invoke'),
@@ -45,17 +44,14 @@ function isFilterTraceEvents(eventName: string): boolean {
   return false;
 }
 
-const vitalTraceEvents = [
-  // 精确匹配规则
-  (s: string) => s === 'evaluateJavaScriptBytecode',
-];
+const vitalTraceEvents = [(s: string) => s === 'evaluateJavaScriptBytecode'];
 
 function isVitalTraceEvent(eventName: string): boolean {
   /**
-   * 检查事件名称是否匹配任何 vital_trace 规则
+   * Check if the event name matches any vital_trace rule
    *
-   * @param eventName - 要检查的事件名称
-   * @returns 如果匹配任一规则则返回 true，否则返回 false
+   * @param eventName - The event name to check
+   * @returns True if matches any rule, otherwise false
    */
   for (const rule of vitalTraceEvents) {
     if (rule(eventName)) {
@@ -77,35 +73,35 @@ export class TraceQueryTool extends Tool {
   }
 
   get_description(): string {
-    return `trace_query 工具用于查询 trace 数据库中的事件信息。支持以下查询模式：
+    return `trace_query tool is used to query event information from the trace database. It supports the following query modes:
 
-1. **time_window_query**: 时间窗口查询
-   - 查询指定时间范围内的所有 trace 事件
-   - 必需参数: start_ts, end_ts
-   - 可选参数: track_id (指定轨道ID)
+1. **time_window_query**:
+   - Queries all trace events within a specified time range
+   - Required Parameters: start_ts, end_ts
+   - Optional Parameters: track_id (specify a track_id)
 
-2. **descendants_query**: 后代查询
-   - 查询指定事件的所有子事件
-   - 必需参数: slice_id
+2. **descendants_query**:
+   - Queries all child events of a specified event
+   - Required Parameters: slice_id
 
-3. **ancestor_query**: 祖先查询
-   - 查询指定事件的所有父事件
-   - 必需参数: slice_id
+3. **ancestor_query**:
+   - Queries all parent events of a specified event
+   - Required Parameters: slice_id
 
-4. **name_query**: 名称查询
-   - 根据事件名称查询匹配的事件
-   - 必需参数: name
-   - 可选参数: slice_id (精确查询特定ID的事件)
+4. **name_query**:
+   - Queries events by name
+   - Required Parameters: name
+   - Optional Parameters: slice_id (exact match for a specific ID)
 
-5. **id_query**: ID查询
-   - 根据事件ID查询特定事件
-   - 必需参数: slice_id
+5. **id_query**:
+   - Queries events by ID
+   - Required Parameters: slice_id
 
-6. **flow_query**: 流查询
-   - 查询与指定事件相关的流事件
-   - 必需参数: slice_id
+6. **flow_query**:
+   - Queries flow events related to a specified event
+   - Required Parameters: slice_id
 
-所有查询都会返回事件的详细信息，包括ID、名称、时间戳、持续时间、轨道ID和参数。`;
+All queries return detailed event information including id, name, timestamp, duration, track_id, and arguments.`;
   }
 
   get_parameters(): ToolParameter[] {
@@ -114,7 +110,7 @@ export class TraceQueryTool extends Tool {
         name: 'mode',
         type: 'string',
         description:
-          '查询模式，支持: time_window_query, descendants_query, ancestor_query, name_query, id_query, flow_query',
+          'supported query modes: time_window_query, descendants_query, ancestor_query, name_query, id_query, flow_query',
         enum: [
           'time_window_query',
           'descendants_query',
@@ -129,7 +125,7 @@ export class TraceQueryTool extends Tool {
       {
         name: 'start_ts',
         type: 'number',
-        description: '开始时间戳 (time_window_query 模式必需)',
+        description: 'start timestamp (required for time_window_query mode)',
         enum: null,
         items: null,
         required: false,
@@ -137,7 +133,7 @@ export class TraceQueryTool extends Tool {
       {
         name: 'end_ts',
         type: 'number',
-        description: '结束时间戳 (time_window_query 模式必需)',
+        description: 'end timestamp (required for time_window_query mode)',
         enum: null,
         items: null,
         required: false,
@@ -145,7 +141,7 @@ export class TraceQueryTool extends Tool {
       {
         name: 'track_id',
         type: 'number',
-        description: '轨道ID (time_window_query 模式可选)',
+        description: 'track ID (optional for time_window_query mode)',
         enum: null,
         items: null,
         required: false,
@@ -154,7 +150,7 @@ export class TraceQueryTool extends Tool {
         name: 'slice_id',
         type: 'number',
         description:
-          'Slice ID (descendants_query, ancestor_query, id_query, flow_query 模式必需)',
+          'slice ID (required for descendants_query, ancestor_query, id_query, flow_query modes)',
         enum: null,
         items: null,
         required: false,
@@ -162,7 +158,7 @@ export class TraceQueryTool extends Tool {
       {
         name: 'name',
         type: 'string',
-        description: '事件名称 (name_query 模式必需)',
+        description: 'event name (required for name_query mode)',
         enum: null,
         items: null,
         required: false,
@@ -170,7 +166,7 @@ export class TraceQueryTool extends Tool {
       {
         name: 'limit',
         type: 'number',
-        description: '返回结果数量限制 (默认: 1000)',
+        description: 'result limit (default: 1000)',
         enum: null,
         items: null,
         required: false,
@@ -195,7 +191,7 @@ export class TraceQueryTool extends Tool {
             error: JSON.stringify({
               status: 'error',
               message:
-                'trace_query tool time_window_query 模式未提供 start_ts 或者 end_ts 参数',
+                'trace_query tool time_window_query mode parameter start_ts or end_ts is required',
             }),
             error_code: -1,
           };
@@ -253,11 +249,11 @@ export class TraceQueryTool extends Tool {
           end_ts,
         );
         const result = {
-          'Trace 事件列表': simplified_trace_event,
+          'Trace events': simplified_trace_event,
           // "Trace 事件对应的描述": trace_event_desc,
         };
         return {
-          output: JSON.stringify({'trace_query 查询结果': result}),
+          output: JSON.stringify({'trace_query results': result}),
         };
       } else if (mode === 'descendants_query' || mode === 'ancestor_query') {
         const slice_id = args.slice_id as number;
@@ -265,14 +261,14 @@ export class TraceQueryTool extends Tool {
           return {
             error: JSON.stringify({
               status: 'error',
-              message: `trace_query tool ${mode} 模式未提供 slice_id 参数`,
+              message: `trace_query tool ${mode} mode parameter slice_id is required`,
             }),
             error_code: -1,
           };
         }
         const result = await this._recursiveQuery(slice_id, mode, limit);
         return {
-          output: JSON.stringify({'trace_query 查询结果': result}),
+          output: JSON.stringify({'trace_query results': result}),
         };
       } else if (mode === 'name_query') {
         const name = args.name as string;
@@ -332,7 +328,7 @@ export class TraceQueryTool extends Tool {
         }
         return {
           output: JSON.stringify({
-            'trace_query 查询结果': JSON.parse(trace_event_json),
+            'trace_query results': JSON.parse(trace_event_json),
           }),
         };
       } else if (mode === 'id_query') {
@@ -374,7 +370,7 @@ export class TraceQueryTool extends Tool {
         }
         const trace_event_json = JSON.stringify(trace_event);
         return {
-          output: JSON.stringify({'trace_query 查询结果': trace_event_json}),
+          output: JSON.stringify({'trace_query results': trace_event_json}),
         };
       } else if (mode === 'flow_query') {
         const slice_id = args.slice_id as number;
@@ -382,7 +378,7 @@ export class TraceQueryTool extends Tool {
           return {
             error: JSON.stringify({
               status: 'error',
-              message: `trace_query ${mode} 模式未提供 slice_id 参数`,
+              message: `trace_query tool ${mode} mode parameter slice_id is required`,
             }),
             error_code: -1,
           };
@@ -440,21 +436,21 @@ export class TraceQueryTool extends Tool {
         // }
         return {
           output: JSON.stringify({
-            'trace_query 查询结果': {
-              'Trace 事件列表': trace_event,
+            'trace_query results': {
+              'Trace events': trace_event,
               // 'Trace 事件对应的描述': trace_event_desc,
             },
           }),
         };
       } else {
         return {
-          error: `trace_query mode: ${mode}参数无效。请使用 'time_window_query', 'descendants_query', 'ancestor_query', 'name_query', 'id_query'`,
+          error: `trace_query mode: ${mode} parameter is invalid. Please use 'time_window_query', 'descendants_query', 'ancestor_query', 'name_query', 'id_query'`,
           error_code: -1,
         };
       }
     } catch (e: any) {
       return {
-        error: `trace_query 执行错误: ${e.message}`,
+        error: `trace_query execute error: ${e.message}`,
         error_code: -1,
       };
     }

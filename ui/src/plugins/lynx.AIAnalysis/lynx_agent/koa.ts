@@ -20,6 +20,7 @@ import {trace_analysis_impl} from './trace_analysis_impl';
 import {generate_feishu_doc} from './utils/feishu_doc';
 import {OverviewChart} from './utils/interface/overview_chart';
 import {pipelineOverviewCharts} from './utils/pipeline_overview_chart';
+import {ReportLanguage} from './utils/interface/language';
 
 export interface TraceAnalysisRequest {
   trace_url: string;
@@ -89,6 +90,7 @@ const trace_analysis = async (request: TraceAnalysisRequest) => {
     },
     tools: [],
   };
+  const reportLanguage = new ReportLanguageImpl();
   const logger = new VerboseLoggerImpl(request.verbose);
   const trace_analysis_results = await trace_analysis_impl(
     request.trace_url,
@@ -96,6 +98,7 @@ const trace_analysis = async (request: TraceAnalysisRequest) => {
     agent_config,
     logger,
     new OverviewChartImpl(),
+    reportLanguage,
   );
   const feishu_doc = await generate_feishu_doc(
     request,
@@ -395,6 +398,12 @@ class VerboseLoggerImpl implements VerboseLogger {
 class OverviewChartImpl implements OverviewChart {
   async generateCharts(traceResult: any): Promise<string[]> {
     return await pipelineOverviewCharts(traceResult);
+  }
+}
+
+class ReportLanguageImpl implements ReportLanguage {
+  localLanguage(): string {
+    return 'zh';
   }
 }
 
