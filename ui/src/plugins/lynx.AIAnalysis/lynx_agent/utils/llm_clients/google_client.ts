@@ -162,7 +162,8 @@ export class GoogleClient extends BaseLLMClient {
       );
     }
 
-    const finishReason = ((response.candidates?.[0]?.finishReason) != null) || 'UNKNOWN';
+    const finishReason =
+      response.candidates?.[0]?.finishReason != null || 'UNKNOWN';
 
     const llmResponse: LLMResponse = {
       content,

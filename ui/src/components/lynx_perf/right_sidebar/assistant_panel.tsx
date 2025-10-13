@@ -15,6 +15,7 @@ import { VerboseLogger } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils
 import { trace_analysis_impl } from '../../../plugins/lynx.AIAnalysis/lynx_agent/trace_analysis_impl';
 import { lynxPerfGlobals } from '../../../lynx_perf/lynx_perf_globals';
 import { OverviewChart } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/interface/overview_chart';
+import { llmState } from '../../../ai_analysis/llm_state';
 
 
 interface TraceAssistantPanelState {
@@ -103,15 +104,33 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     };
   }
 
+  getLLMConfig = () => {
+    const modelProvider = AIAnalysis.modelProviderSetting.get();
+    const modelName = AIAnalysis.modelNameSetting.get();
+    const apiKey = AIAnalysis.APIKeySetting.get();
+    const baseUrl = AIAnalysis.baseUrlSetting.get();
+    // if llm config is not set through settings page, use default config
+    if (!modelProvider && !modelName && !apiKey && !baseUrl) {
+      return llmState.state.config;
+    }
+    return {
+      modelProvider,
+      modelName,
+      apiKey,
+      baseUrl
+    };
+  }
+
    traceAnalysis = async () => {
+    const llmConfig = this.getLLMConfig();
      const config : AgentConfig = {
       max_steps: 20,
       model: {
-        model: AIAnalysis.modelNameSetting.get(),
+        model: llmConfig.modelName,
         model_provider: {
-          api_key: AIAnalysis.APIKeySetting.get(),
-          provider: AIAnalysis.modelProviderSetting.get(),
-          base_url: AIAnalysis.baseUrlSetting.get(),
+          api_key: llmConfig.apiKey,
+          provider: llmConfig.modelProvider,
+          base_url: llmConfig.baseUrl,
         },
         parallel_tool_calls: true,
         max_retries: 2,

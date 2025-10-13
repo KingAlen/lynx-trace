@@ -31,7 +31,7 @@ export default class AIAnalysis implements PerfettoPlugin {
       description:
         'The LLM model provider to use, such as doubao, openai, anthropic, google_gemini.',
       schema: z.string(),
-      defaultValue: 'doubao',
+      defaultValue: '',
       requiresReload: true,
     });
     AIAnalysis.APIKeySetting = app.settings.register({
