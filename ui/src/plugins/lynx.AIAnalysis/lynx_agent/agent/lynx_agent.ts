@@ -255,7 +255,7 @@ export class LynxAgent {
     this._llmClient = new LLMClient(agentConfig.model);
     this._modelConfig = agentConfig.model;
     this._maxSteps = agentConfig.max_steps;
-    this._name = name + uuidv4();
+    this._name = name + '-' + uuidv4();
     this._reportLanguage = reportLanguage;
 
     // Add Trace Query Tools
@@ -423,15 +423,23 @@ export class LynxAgent {
       this._verboseLogger?.debug(
         `[${this._name}] LLM reasoning_content: ${llmResponse.reasoning_content}`,
       );
-    }
-    if (llmResponse.finish_reason) {
-      this._verboseLogger?.debug(
-        `[${this._name}] LLM finish_reason: ${llmResponse.finish_reason}`,
+      this._verboseLogger?.llm_feedback(
+        `[${this._name}] reasoning content: ${llmResponse.reasoning_content}`,
       );
     }
+
+    // if (llmResponse.finish_reason) {
+    //   this._verboseLogger?.debug(
+    //     `[${this._name}] LLM finish_reason: ${llmResponse.finish_reason}`,
+    //   );
+    // }
+
     if (llmResponse.content) {
       this._verboseLogger?.debug(
         `[${this._name}] LLM output content: ${llmResponse.content}`,
+      );
+      this._verboseLogger?.llm_feedback(
+        `[${this._name}] output content: ${llmResponse.content}`,
       );
     }
 

@@ -391,6 +391,10 @@ class VerboseLoggerImpl implements VerboseLogger {
   get_log_file_path(): string | undefined {
     return this.logFile;
   }
+
+  llm_feedback(_message: string): void {
+    // we have log the llm feedback in verbose mode
+  }
 }
 
 class OverviewChartImpl implements OverviewChart {

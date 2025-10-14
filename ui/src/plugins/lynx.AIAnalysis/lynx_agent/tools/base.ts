@@ -279,6 +279,12 @@ export class ToolExecutor {
     const tool = this.tools[normalized_name];
 
     try {
+      this._verboseLogger?.llm_feedback(
+        `[${this._agent_name}] will execute Tool '${tool_call.name}' with arguments ${JSON.stringify(
+          tool_call.arguments,
+        )}`,
+      );
+
       const tool_exec_result = await tool.execute(tool_call.arguments || {});
 
       const result_str =

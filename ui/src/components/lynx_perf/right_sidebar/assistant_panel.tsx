@@ -4,7 +4,8 @@
 
 import {Component} from 'react';
 import Markdown from 'react-markdown';
-import {Button, Spin} from 'antd';
+import {Button, Spin, Collapse} from 'antd';
+const { Panel } = Collapse;
 import { TraceQuery } from '../../../plugins/lynx.AIAnalysis/lynx_agent/tools/trace_query';
 import { AppImpl } from '../../../core/app_impl';
 import { generate_markdown_doc } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/markdown_doc';
@@ -23,6 +24,8 @@ interface TraceAssistantPanelState {
   status: 'initial' | 'analyzing' | 'completed';
   analysisResult: string;
   traceUrl: string;
+  middleStepContent: string[];
+  isMiddleStepCollapsed: boolean;
 }
 
 class TraceProcessorImpl implements TraceQuery {
@@ -68,6 +71,12 @@ class TraceProcessorImpl implements TraceQuery {
 }
 
 class VerboseLoggerImpl implements VerboseLogger {
+  private panelInstance?: TraceAssistantPanel;
+
+  constructor(panelInstance?: TraceAssistantPanel) {
+    this.panelInstance = panelInstance;
+  }
+
   debug(message: string): void {
     console.debug('debug: ' + message);
   }
@@ -87,6 +96,12 @@ class VerboseLoggerImpl implements VerboseLogger {
     // in web page, we do not need to log file path
     return undefined;
   }
+
+  llm_feedback(message: string): void {
+    if (this.panelInstance) {
+      this.panelInstance.addMiddleStepContent("==================\n" + message);
+    }
+  }
 }
 
 class OverviewChartImpl implements OverviewChart {
@@ -96,13 +111,27 @@ class OverviewChartImpl implements OverviewChart {
 }
 
 export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState> {
+  private middleStepRef: HTMLDivElement | null = null;
+
   constructor(props: {}) {
     super(props);
     this.state = {
       status: 'initial',
       analysisResult: '',
-      traceUrl: window.location.href
+      traceUrl: window.location.href,
+      middleStepContent: [],
+      isMiddleStepCollapsed: false
     };
+  }
+
+  componentDidUpdate(_prevProps: {}, prevState: TraceAssistantPanelState) {
+    if (
+      this.state.status === 'analyzing' &&
+      this.state.middleStepContent.length > prevState.middleStepContent.length &&
+      this.middleStepRef
+    ) {
+      this.middleStepRef.scrollTop = this.middleStepRef.scrollHeight;
+    }
   }
 
   getLLMConfig = () => {
@@ -141,11 +170,27 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     const reportLanguage: ReportLanguage = {
       localLanguage: () => llmState.state.reportLanguage,
     }
-    return await trace_analysis_impl(window.location.href, new TraceProcessorImpl(), config, new VerboseLoggerImpl(), new OverviewChartImpl(), reportLanguage);
+    return await trace_analysis_impl(window.location.href, new TraceProcessorImpl(), config, new VerboseLoggerImpl(this), new OverviewChartImpl(), reportLanguage);
   }
 
+  addMiddleStepContent = (message: string) => {
+    this.setState(prevState => ({
+      middleStepContent: [...prevState.middleStepContent, message]
+    }));
+  };
+
+  toggleMiddleStepCollapse = () => {
+    this.setState(prevState => ({
+      isMiddleStepCollapsed: !prevState.isMiddleStepCollapsed
+    }));
+  };
+
   handleYesClick = async () => {
-    this.setState({ status: 'analyzing' });
+    this.setState({ 
+      status: 'analyzing',
+      middleStepContent: [],
+      isMiddleStepCollapsed: false
+    });
     try {
       const result = await this.traceAnalysis();
       if (result.length <= 0) {
@@ -154,14 +199,16 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
         const finalResult = generate_markdown_doc(result);
         this.setState({ 
           status: 'completed',
-          analysisResult: finalResult
+          analysisResult: finalResult,
+          isMiddleStepCollapsed: true
         });
       }
     } catch (error) {
       console.error('AI analysis request failed:', error);
       this.setState({ 
         status: 'completed',
-        analysisResult: 'Analysis failed, please try again later.'
+        analysisResult: 'Analysis failed, please try again later.',
+        isMiddleStepCollapsed: true
       });
     }
   };
@@ -195,37 +242,91 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       
       case 'analyzing':
         return (
-          <div style={{ padding: '16px', textAlign: 'center' }}>
-            <Spin size="large" />
-            <p style={{ marginTop: '12px' }}>
-              Analysis in progress, expected to complete in 3-5 minutes. The results will be displayed on the current page.
-            </p>
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ textAlign: 'center', padding: '16px' }}>
+              <Spin size="large" />
+              <p style={{ marginTop: '12px' }}>
+                Analysis in progress......
+              </p>
+            </div>
+            {this.state.middleStepContent.length > 0 && (
+               <div 
+                 ref={(el) => { this.middleStepRef = el; }}
+                 style={{
+                   flex: 1,
+                   overflowY: 'auto',
+                   overflowX: 'hidden',
+                   backgroundColor: '#fafafa',
+                   fontSize: '12px',
+                   padding: '8px',
+                   fontFamily: 'monospace',
+                   border: '1px solid #f0f0f0',
+                   borderRadius: '4px',
+                   wordWrap: 'break-word'
+                 }}
+               >
+                 {this.state.middleStepContent.map((content, index) => (
+                   <div key={index} style={{ marginBottom: '8px', whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                     {content}
+                   </div>
+                 ))}
+               </div>
+             )}
           </div>
         );
       
       case 'completed':
          return (
-           <div style={{
-             maxHeight: '100vh',
-             overflowY: 'auto',
-             border: '1px solid #f0f0f0',
-             borderRadius: '4px'
-           }}>
-             <div style={{ padding: '16px' }}>
-               <Markdown 
-                 components={{
-                   h3: ({children}) => (
-                     <h3 style={{
-                       fontSize: '18px',
-                       fontWeight: '700',
+           <div style={{ padding: '16px' }}>
+             {this.state.middleStepContent.length > 0 && (
+               <div style={{ marginBottom: '16px' }}>
+                 <Collapse 
+                   activeKey={this.state.isMiddleStepCollapsed ? [] : ['1']}
+                   onChange={() => this.toggleMiddleStepCollapse()}
+                 >
+                   <Panel header="Analysis Process Details" key="1">
+                     <div style={{
+                       maxHeight: '300px',
+                       overflowY: 'auto',
+                       padding: '8px',
+                       backgroundColor: '#fafafa',
+                       fontSize: '12px',
+                       fontFamily: 'monospace',
+                       border: '1px solid #f0f0f0',
+                       borderRadius: '4px'
                      }}>
-                       {children}
-                     </h3>
-                   )
-                 }}
-               >
-                 {analysisResult}
-               </Markdown>
+                       {this.state.middleStepContent.map((content, index) => (
+                         <div key={index} style={{ marginBottom: '8px', whiteSpace: 'pre-wrap' }}>
+                           {content}
+                         </div>
+                       ))}
+                     </div>
+                   </Panel>
+                 </Collapse>
+               </div>
+             )}
+             <div style={{
+               maxHeight: '100vh',
+               overflowY: 'auto',
+               border: '1px solid #f0f0f0',
+               borderRadius: '4px'
+             }}>
+               <div style={{ padding: '16px' }}>
+                 <Markdown 
+                   components={{
+                     h3: ({children}) => (
+                       <h3 style={{
+                         fontSize: '18px',
+                         fontWeight: '700',
+                       }}>
+                         {children}
+                       </h3>
+                     )
+                   }}
+                 >
+                   {analysisResult}
+                 </Markdown>
+               </div>
              </div>
            </div>
          );
