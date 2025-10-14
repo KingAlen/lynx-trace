@@ -34,7 +34,7 @@ export async function loadShell(
 ): Promise<ShellLoadResult> {
   // Get available port
   const port = uniquePort ? await getAvailablePort() : TP_PORT;
-  const addr = '127.0.0.1';
+  const addr = 'localhost';
   const url = `http://${addr}:${port}`;
 
   // Get shell path
@@ -59,6 +59,14 @@ export async function loadShell(
   const subprocess = spawn(shellPath, args, {
     stdio: verbose ? 'inherit' : 'pipe',
     detached: false,
+  });
+  subprocess.on('error', (err) => {
+    console.log('Failed to start trace processor shell', err);
+  });
+  subprocess.on('exit', (code, signal) => {
+    console.log(
+      `Trace processor shell exited with code ${code} and signal ${signal}`,
+    );
   });
 
   // Wait for the server to be ready

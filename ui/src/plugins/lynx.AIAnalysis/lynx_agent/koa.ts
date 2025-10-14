@@ -111,7 +111,7 @@ const trace_analysis = async (request: TraceAnalysisRequest) => {
 class TraceProcessorImpl implements TraceQuery {
   private tp: TraceProcessor | undefined;
 
-  async initProcessor(_trace_url: string): Promise<void> {
+  async initProcessor(trace_url: string): Promise<void> {
     // Determine the correct binary path based on the current system
     const binPath = await this.getBinaryPath();
 
@@ -124,7 +124,7 @@ class TraceProcessorImpl implements TraceQuery {
     });
 
     // Download trace file and get local path
-    const traceFile = await this.downloadTraceFile(_trace_url);
+    const traceFile = await this.downloadTraceFile(trace_url);
 
     this.tp = await TraceProcessor.create(traceFile, undefined, config);
   }

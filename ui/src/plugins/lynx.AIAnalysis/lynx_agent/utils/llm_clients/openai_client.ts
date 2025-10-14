@@ -19,8 +19,8 @@ export class OpenAIClient extends BaseLLMClient {
     this.client = new OpenAI({
       apiKey: this.api_key,
       baseURL: this.base_url,
+      dangerouslyAllowBrowser: true,
     });
-    console.log('current api key : ' + this.api_key);
   }
 
   set_chat_history(messages: LLMMessage[]): void {
