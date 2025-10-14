@@ -17,7 +17,7 @@ import {URL} from 'url';
 import {v4 as uuidv4} from 'uuid';
 import {VerboseLogger} from './utils/interface/verbose_logger';
 import {trace_analysis_impl} from './trace_analysis_impl';
-import {generate_feishu_doc} from './utils/feishu_doc';
+import {generate_feishu_doc, sendMessageToLark} from './utils/feishu_doc';
 import {OverviewChart} from './utils/interface/overview_chart';
 import {pipelineOverviewCharts} from './utils/pipeline_overview_chart';
 import {ReportLanguage} from './utils/interface/language';
@@ -105,6 +105,9 @@ const trace_analysis = async (request: TraceAnalysisRequest) => {
     trace_analysis_results,
     logger,
   );
+  if (request.chat_id) {
+    await sendMessageToLark(feishu_doc, request.chat_id);
+  }
   return feishu_doc;
 };
 
@@ -137,9 +140,9 @@ class TraceProcessorImpl implements TraceQuery {
           'f8a545f177853ef459e9b799bb1980db7a7a77e156de8d9fe61ff006175563bb',
       },
       linux: {
-        url: 'https://tosv.byted.org/obj/lynx-testing/trace_processor_shell_v50_linux_amd64',
+        url: 'https://tosv.byted.org/obj/lynx-trace/trace_processor_shell_v50_linux_amd64',
         sha256:
-          '5024f2bf0d3324d3a80b49a44ac3e1fa680890946765586dc6fac7a5fdf66173',
+          'b9795c673eca48c3f98a7ed3518daacaf4cec280423c9e48fd73faca29a4a37c',
       },
     };
 
