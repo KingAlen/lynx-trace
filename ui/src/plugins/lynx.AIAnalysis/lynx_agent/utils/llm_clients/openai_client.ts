@@ -57,7 +57,7 @@ export class OpenAIClient extends BaseLLMClient {
     /**
      * Send chat messages to OpenAI with optional tool support.
      */
-    const openaiMessages = this.parseMessages(messages);
+    const parsedMessages = this.parseMessages(messages);
 
     let toolSchemas: OpenAI.Chat.Completions.ChatCompletionTool[] | null = null;
     if (tools) {
@@ -72,12 +72,11 @@ export class OpenAIClient extends BaseLLMClient {
       }));
     }
 
-    const apiCallInput: OpenAI.Chat.Completions.ChatCompletionMessageParam[] =
-      [];
     if (reuseHistory) {
-      apiCallInput.push(...this.messageHistory);
+      this.messageHistory.push(...parsedMessages);
+    } else {
+      this.messageHistory = parsedMessages;
     }
-    apiCallInput.push(...openaiMessages);
 
     // Apply retry decorator to the API call
     const retryDecorator = retryWith(
@@ -85,7 +84,7 @@ export class OpenAIClient extends BaseLLMClient {
       modelConfig.max_retries || 3,
     );
     const response = await retryDecorator(
-      apiCallInput,
+      this.messageHistory,
       modelConfig,
       toolSchemas,
     );

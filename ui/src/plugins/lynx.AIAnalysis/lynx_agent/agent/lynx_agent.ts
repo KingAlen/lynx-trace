@@ -428,12 +428,6 @@ export class LynxAgent {
       );
     }
 
-    // if (llmResponse.finish_reason) {
-    //   this._verboseLogger?.debug(
-    //     `[${this._name}] LLM finish_reason: ${llmResponse.finish_reason}`,
-    //   );
-    // }
-
     if (llmResponse.content) {
       this._verboseLogger?.debug(
         `[${this._name}] LLM output content: ${llmResponse.content}`,
@@ -513,11 +507,7 @@ export class LynxAgent {
       // Add tool result to conversation
       const message = {
         role: 'user',
-        tool_result: {
-          ...toolResult,
-          call_id: 'default_call_id',
-          name: 'tool_result',
-        },
+        tool_result: toolResult,
       };
       messages.push(message);
     }

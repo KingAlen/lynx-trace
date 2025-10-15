@@ -9,6 +9,7 @@ enum LLMProvider {
   //   ANTHROPIC = 'anthropic',
   DOUBAO = 'doubao',
   GOOGLE = 'google',
+  DEEPSEEK = 'deepseek',
 }
 
 /**
@@ -25,6 +26,7 @@ export class LLMClient {
 
     switch (this.provider) {
       case LLMProvider.OPENAI:
+      case LLMProvider.DEEPSEEK:
         const {OpenAIClient} = require('./openai_client');
         this.client = new OpenAIClient(modelConfig);
         break;
