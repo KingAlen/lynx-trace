@@ -2,7 +2,8 @@ import {koaApp} from './koa';
 import * as http from 'http';
 
 // Export for external use
-export {trace_analysis, TraceAnalysisRequest} from './koa';
+export {trace_analysis} from './koa';
+export {TraceAnalysisRequest} from './types/types';
 export {koaApp};
 
 if (require.main === module) {

@@ -6,18 +6,18 @@ import {Component} from 'react';
 import Markdown from 'react-markdown';
 import {Button, Spin, Collapse} from 'antd';
 const { Panel } = Collapse;
-import { TraceQuery } from '../../../plugins/lynx.AIAnalysis/lynx_agent/tools/trace_query';
+import { TraceQuery } from '../../../lynx_agent/tools/trace_query';
 import { AppImpl } from '../../../core/app_impl';
-import { generate_markdown_doc } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/markdown_doc';
+import { generate_markdown_doc } from '../../../lynx_agent/utils/markdown_doc';
 import AIAnalysis from '../../../plugins/lynx.AIAnalysis';
-import { AgentConfig } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/config';
+import { AgentConfig } from '../../../lynx_agent/utils/config';
 import { QueryResult, SqlValue } from '../../../trace_processor/query_result';
-import { VerboseLogger } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/interface/verbose_logger';
-import { trace_analysis_impl } from '../../../plugins/lynx.AIAnalysis/lynx_agent/trace_analysis_impl';
+import { VerboseLogger } from '../../../lynx_agent/utils/interface/verbose_logger';
+import { trace_analysis_impl } from '../../../lynx_agent/trace_analysis_impl';
 import { lynxPerfGlobals } from '../../../lynx_perf/lynx_perf_globals';
-import { OverviewChart } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/interface/overview_chart';
-import { llmState } from '../../../ai_analysis/llm_state';
-import { ReportLanguage } from '../../../plugins/lynx.AIAnalysis/lynx_agent/utils/interface/language';
+import { OverviewChart } from '../../../lynx_agent/utils/interface/overview_chart';
+import { llmState } from '../../../lynx_perf/llm_state';
+import { ReportLanguage } from '../../../lynx_agent/utils/interface/language';
 
 
 interface TraceAssistantPanelState {
@@ -26,6 +26,7 @@ interface TraceAssistantPanelState {
   traceUrl: string;
   middleStepContent: string[];
   isMiddleStepCollapsed: boolean;
+  extraActionArea?: React.ReactNode;
 }
 
 class TraceProcessorImpl implements TraceQuery {
@@ -120,7 +121,8 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       analysisResult: '',
       traceUrl: window.location.href,
       middleStepContent: [],
-      isMiddleStepCollapsed: false
+      isMiddleStepCollapsed: false,
+      extraActionArea: undefined
     };
   }
 
@@ -197,10 +199,13 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
         throw new Error('Analysis failed, llm ouput is empty');
       } else {
         const finalResult = generate_markdown_doc(result);
+        const extraActionArea = await llmState.state.reportExtraAction?.render(result, finalResult);
+
         this.setState({ 
           status: 'completed',
           analysisResult: finalResult,
-          isMiddleStepCollapsed: true
+          isMiddleStepCollapsed: true,
+          extraActionArea: extraActionArea
         });
       }
     } catch (error) {
@@ -208,7 +213,8 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       this.setState({ 
         status: 'completed',
         analysisResult: 'Analysis failed, please try again later.',
-        isMiddleStepCollapsed: true
+        isMiddleStepCollapsed: true,
+        extraActionArea: undefined
       });
     }
   };
@@ -278,6 +284,11 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       case 'completed':
          return (
            <div style={{ padding: '16px' }}>
+             {this.state.extraActionArea && (
+               <div style={{ marginBottom: '16px' }}>
+                 {this.state.extraActionArea}
+               </div>
+             )}
              {this.state.middleStepContent.length > 0 && (
                <div style={{ marginBottom: '16px' }}>
                  <Collapse 

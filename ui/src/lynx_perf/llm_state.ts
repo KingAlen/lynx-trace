@@ -16,6 +16,7 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
+import { TraceAnalysisResult } from '../lynx_agent/types/types';
 import {createStore} from '../base/store';
 
 export interface LLMConfig {
@@ -30,9 +31,14 @@ export enum ReportLanguage {
   CHINESE = 'zh',
 }
 
+export interface ReportExtraAction {
+  render(results: TraceAnalysisResult[], markdownContent: string) : Promise<React.ReactNode | undefined>; 
+}
+
 interface State {
   config: LLMConfig;
   reportLanguage: ReportLanguage;
+  reportExtraAction: ReportExtraAction | undefined;
 }
 
 const emptyState: State = {
@@ -43,6 +49,7 @@ const emptyState: State = {
     baseUrl: '',
   },
   reportLanguage: ReportLanguage.ENGLISH,
+  reportExtraAction: undefined,
 };
 
 export const llmState = createStore<State>(emptyState);
@@ -56,5 +63,11 @@ export function updateLLMConfig(config: LLMConfig) {
 export function updateReportLanguage(language: ReportLanguage) {
   llmState.edit((draft) => {
     draft.reportLanguage = language;
+  });
+}
+
+export function updateReportExtraAction(extraAction: ReportExtraAction | undefined) {
+  llmState.edit((draft) => {
+    draft.reportExtraAction = extraAction;
   });
 }

@@ -1,9 +1,9 @@
-import {TraceAnalysisResult} from '../trace_analysis_impl';
+
 import {VerboseLogger} from './interface/verbose_logger';
 import {v4 as uuidv4} from 'uuid';
 import * as fs from 'fs';
-import {TraceAnalysisRequest} from '../koa';
 import {uploadFileToTos} from './pipeline_overview_chart';
+import { TraceAnalysisRequest, TraceAnalysisResult } from '../types/types';
 
 const FEISHU_DOMAIN = process.env.INNER_USE
   ? 'fsopen.bytedance.net'
@@ -12,7 +12,7 @@ const FEISHU_DOMAIN = process.env.INNER_USE
 export async function generate_feishu_doc(
   request: TraceAnalysisRequest,
   llm_outputs: TraceAnalysisResult[],
-  logger: VerboseLogger,
+  logger: VerboseLogger | undefined,
 ): Promise<string> {
   const instanceBlocks = await buildInstancesBlocks(
     request.trace_url,
@@ -38,13 +38,13 @@ export async function generate_feishu_doc(
         request.overview,
         bundleInfos,
       )) || '';
-    const logFile = logger.get_log_file_path();
+    const logFile = logger?.get_log_file_path();
     if (logFile) {
       fs.appendFileSync(logFile, `trace_analysis result: ${result}\n`);
     }
   } else {
     result = 'No markdown content found';
-    const logFile = logger.get_log_file_path();
+    const logFile = logger?.get_log_file_path();
     if (logFile) {
       fs.appendFileSync(
         logFile,
@@ -297,7 +297,7 @@ function generateTitle(bundleInfos: string[], email?: string): string {
 async function buildInstancesBlocks(
   traceUrl: string,
   llmOutputs: any[],
-  logger: VerboseLogger,
+  logger?: VerboseLogger,
 ): Promise<[string[], any[]] | null> {
   const token = await getTenantAccessToken();
   if (!token) {
@@ -405,7 +405,7 @@ async function buildInstancesBlocks(
 
   // log file block
   // Note: VerboseLogger interface doesn't have verbose property, checking log file path instead
-  const logFile = logger.get_log_file_path();
+  const logFile = logger?.get_log_file_path();
   if (logFile && fs.existsSync(logFile) && fs.statSync(logFile).size > 0) {
     const logFileUrl = await uploadFileToTos(logFile);
     if (logFileUrl) {
@@ -444,7 +444,7 @@ async function buildInstancesBlocks(
 async function createFeishuDocument(
   firstLevelBlockIds: string[],
   blocks: any[],
-  logger: VerboseLogger,
+  logger?: VerboseLogger,
   email?: string,
   unionId?: string,
   overview: boolean = false,
@@ -484,7 +484,7 @@ async function createFeishuDocument(
       !respJson.data.document.document_id
     ) {
       const errorMsg = `create document failed: ${JSON.stringify(respJson)}`;
-      logger.error(errorMsg);
+      logger?.error(errorMsg);
       return errorMsg;
     }
 
@@ -506,7 +506,7 @@ async function createFeishuDocument(
     return `https://bytedance.larkoffice.com/docx/${documentId}`;
   } catch (error) {
     const errorMsg = `create feishu document failed: ${error}`;
-    logger.error(errorMsg);
+    logger?.error(errorMsg);
     return errorMsg;
   }
 }

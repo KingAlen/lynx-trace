@@ -1,4 +1,4 @@
-import {TraceAnalysisResult} from '../trace_analysis_impl';
+import { TraceAnalysisResult } from "../types/types";
 
 export function generate_markdown_doc(
   llm_outputs: TraceAnalysisResult[],

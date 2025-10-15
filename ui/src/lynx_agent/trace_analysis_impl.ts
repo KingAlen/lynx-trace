@@ -5,13 +5,7 @@ import {AgentConfig} from './utils/config';
 import {overviewTraceImpl, OverviewTraceResult} from './utils/overview_trace';
 import {OverviewChart} from './utils/interface/overview_chart';
 import {ReportLanguage} from './utils/interface/language';
-
-export interface TraceAnalysisResult {
-  stage_one_results: string[];
-  overview_trace_chart_urls: string[];
-  timing_flags: string[];
-  bundle_url: string;
-}
+import { TraceAnalysisResult } from './types/types';
 
 export async function trace_analysis_impl(
   trace_url: string,

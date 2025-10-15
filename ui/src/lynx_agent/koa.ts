@@ -21,18 +21,7 @@ import {generate_feishu_doc, sendMessageToLark} from './utils/feishu_doc';
 import {OverviewChart} from './utils/interface/overview_chart';
 import {pipelineOverviewCharts} from './utils/pipeline_overview_chart';
 import {ReportLanguage} from './utils/interface/language';
-
-export interface TraceAnalysisRequest {
-  trace_url: string;
-  chat_id: string;
-  email: string | undefined;
-  union_id: string | undefined;
-  overview: boolean;
-  message_id: string;
-  verbose: boolean;
-  evaluate: boolean;
-  prompt: string | undefined;
-}
+import { TraceAnalysisRequest } from './types/types';
 
 const koaApp = new Koa();
 const router = new Router();

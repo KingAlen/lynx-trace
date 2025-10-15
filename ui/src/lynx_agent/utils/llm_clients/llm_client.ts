@@ -36,10 +36,10 @@ export class LLMClient {
       //     this.client = new AnthropicClient(modelConfig);
       //     break;
 
-      case LLMProvider.DOUBAO:
-        const {DoubaoClient} = require('./doubao_client');
-        this.client = new DoubaoClient(modelConfig);
-        break;
+      // case LLMProvider.DOUBAO:
+      //   const {DoubaoClient} = require('./doubao_client');
+      //   this.client = new DoubaoClient(modelConfig);
+      //   break;
 
       case LLMProvider.GOOGLE:
         const {GoogleClient} = require('./google_client');
@@ -47,7 +47,9 @@ export class LLMClient {
         break;
 
       default:
-        throw new Error(`Unsupported provider: ${this.provider}`);
+        const {DoubaoClient} = require('./doubao_client');
+        this.client = new DoubaoClient(modelConfig);
+        break;
     }
   }
 
