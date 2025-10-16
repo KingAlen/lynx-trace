@@ -2,9 +2,9 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
-import {Component} from 'react';
+import { Component } from 'react';
 import Markdown from 'react-markdown';
-import {Button, Spin, Collapse} from 'antd';
+import { Button, Spin, Collapse } from 'antd';
 const { Panel } = Collapse;
 import { TraceQuery } from '../../../lynx_agent/tools/trace_query';
 import { AppImpl } from '../../../core/app_impl';
@@ -18,6 +18,7 @@ import { lynxPerfGlobals } from '../../../lynx_perf/lynx_perf_globals';
 import { OverviewChart } from '../../../lynx_agent/utils/interface/overview_chart';
 import { llmState } from '../../../lynx_perf/llm_state';
 import { ReportLanguage } from '../../../lynx_agent/utils/interface/language';
+import { Router } from '../../../core/router';
 
 
 interface TraceAssistantPanelState {
@@ -48,26 +49,26 @@ class TraceProcessorImpl implements TraceQuery {
   }
 
   resultToArray(result: QueryResult): Array<Record<string, SqlValue>> {
-      const columns = result.columns();
-      const rows: Array<Record<string, SqlValue>> = [];
-      for (const it = result.iter({}); it.valid(); it.next()) {
-          if (rows.length > 5000) {
-            throw new Error(
-                'Query returned too many results, max 5000 rows. Results should be aggregates rather than raw data.',
-            );
-          }
-
-          const row: {[key: string]: SqlValue} = {};
-          for (const name of columns) {
-            let value = it.get(name);
-            if (typeof value === 'bigint') {
-                value = Number(value);
-            }
-            row[name] = value;
-          }
-          rows.push(row);
+    const columns = result.columns();
+    const rows: Array<Record<string, SqlValue>> = [];
+    for (const it = result.iter({}); it.valid(); it.next()) {
+      if (rows.length > 5000) {
+        throw new Error(
+          'Query returned too many results, max 5000 rows. Results should be aggregates rather than raw data.',
+        );
       }
-      return rows;
+
+      const row: { [key: string]: SqlValue } = {};
+      for (const name of columns) {
+        let value = it.get(name);
+        if (typeof value === 'bigint') {
+          value = Number(value);
+        }
+        row[name] = value;
+      }
+      rows.push(row);
+    }
+    return rows;
   }
 }
 
@@ -113,7 +114,9 @@ class OverviewChartImpl implements OverviewChart {
 
 export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState> {
   private middleStepRef: HTMLDivElement | null = null;
-
+  private markdownRef: HTMLDivElement | null = null;
+  private markdownClick: (e: MouseEvent) => void;
+  private isEventListenerAdded = false;
   constructor(props: {}) {
     super(props);
     this.state = {
@@ -124,7 +127,43 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       isMiddleStepCollapsed: false,
       extraActionArea: undefined
     };
+    this.markdownClick = this.handleMarkdownClick.bind(this);
   }
+
+  private isCurrentPageLink(href: string) {
+    try {
+      const currentUrl = new URL(window.location.href);
+      const targetUrl = new URL(href);
+      return currentUrl.host == targetUrl.host && currentUrl.pathname == targetUrl.pathname;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  private getSliceIdFromUrl(href: string) {
+    try {
+      const router = Router.parseUrl(href);
+      return router.args.sliceId ?? null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  private handleMarkdownClick(e: MouseEvent) {
+    if (e.target && e.target instanceof HTMLElement && e.target.tagName === 'A') {
+      const href = e.target.getAttribute('href');
+
+      if (href && this.isCurrentPageLink(href)) {
+        const sliceId = this.getSliceIdFromUrl(href);
+        if (sliceId) {
+          e.preventDefault();
+          AppImpl.instance.trace?.selection.selectSqlEvent('slice', parseInt(sliceId), {
+            scrollToSelection: true,
+          });
+        }
+      }
+    }
+  };
 
   componentDidUpdate(_prevProps: {}, prevState: TraceAssistantPanelState) {
     if (
@@ -134,6 +173,37 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     ) {
       this.middleStepRef.scrollTop = this.middleStepRef.scrollHeight;
     }
+
+    if (
+      this.state.status === 'completed' &&
+      this.markdownRef &&
+      !this.isEventListenerAdded // 确保只添加一次
+    ) {
+      this.markdownRef.addEventListener('click', this.markdownClick);
+      this.isEventListenerAdded = true;
+      console.log('Markdown click event listener added'); // 调试用
+    }
+
+    // 当状态从 completed 变为其他状态时，移除事件监听器
+    if (
+      prevState.status === 'completed' &&
+      this.state.status !== 'completed' &&
+      this.isEventListenerAdded
+    ) {
+      this.removeMarkdownClickListener();
+    }
+  }
+
+  private removeMarkdownClickListener() {
+    if (this.markdownRef && this.isEventListenerAdded) {
+      this.markdownRef.removeEventListener('click', this.markdownClick);
+      this.isEventListenerAdded = false;
+      console.log('Markdown click event listener removed'); // 调试用
+    }
+  }
+
+  componentWillUnmount() {
+    this.removeMarkdownClickListener();
   }
 
   getLLMConfig = () => {
@@ -153,9 +223,9 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     };
   }
 
-   traceAnalysis = async () => {
+  traceAnalysis = async () => {
     const llmConfig = this.getLLMConfig();
-    const config : AgentConfig = {
+    const config: AgentConfig = {
       max_steps: 20,
       model: {
         model: llmConfig.modelName,
@@ -188,7 +258,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
   };
 
   handleYesClick = async () => {
-    this.setState({ 
+    this.setState({
       status: 'analyzing',
       middleStepContent: [],
       isMiddleStepCollapsed: false
@@ -201,7 +271,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
         const finalResult = generate_markdown_doc(result);
         const extraActionArea = await llmState.state.reportExtraAction?.render(result, finalResult);
 
-        this.setState({ 
+        this.setState({
           status: 'completed',
           analysisResult: finalResult,
           isMiddleStepCollapsed: true,
@@ -210,7 +280,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       }
     } catch (error) {
       console.error('AI analysis request failed:', error);
-      this.setState({ 
+      this.setState({
         status: 'completed',
         analysisResult: 'Analysis failed, please try again later.',
         isMiddleStepCollapsed: true,
@@ -225,15 +295,15 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
 
   renderContent = () => {
     const { status, analysisResult } = this.state;
-    
+
     switch (status) {
       case 'initial':
         return (
           <div style={{ padding: '16px' }}>
             <p>Do you need to perform AI analysis on the current Trace?</p>
             <div style={{ marginTop: '12px' }}>
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 onClick={this.handleYesClick}
                 style={{ marginRight: '8px' }}
               >
@@ -245,7 +315,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
             </div>
           </div>
         );
-      
+
       case 'analyzing':
         return (
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -256,92 +326,100 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
               </p>
             </div>
             {this.state.middleStepContent.length > 0 && (
-               <div 
-                 ref={(el) => { this.middleStepRef = el; }}
-                 style={{
-                   flex: 1,
-                   overflowY: 'auto',
-                   overflowX: 'hidden',
-                   backgroundColor: '#fafafa',
-                   fontSize: '12px',
-                   padding: '8px',
-                   fontFamily: 'monospace',
-                   border: '1px solid #f0f0f0',
-                   borderRadius: '4px',
-                   wordWrap: 'break-word'
-                 }}
-               >
-                 {this.state.middleStepContent.map((content, index) => (
-                   <div key={index} style={{ marginBottom: '8px', whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
-                     {content}
-                   </div>
-                 ))}
-               </div>
-             )}
+              <div
+                ref={(el) => { this.middleStepRef = el; }}
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  backgroundColor: '#fafafa',
+                  fontSize: '12px',
+                  padding: '8px',
+                  fontFamily: 'monospace',
+                  border: '1px solid #f0f0f0',
+                  borderRadius: '4px',
+                  wordWrap: 'break-word'
+                }}
+              >
+                {this.state.middleStepContent.map((content, index) => (
+                  <div key={index} style={{ marginBottom: '8px', whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                    {content}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
-      
+
       case 'completed':
-         return (
-           <div style={{ padding: '16px' }}>
-             {this.state.extraActionArea && (
-               <div style={{ marginBottom: '16px' }}>
-                 {this.state.extraActionArea}
-               </div>
-             )}
-             {this.state.middleStepContent.length > 0 && (
-               <div style={{ marginBottom: '16px' }}>
-                 <Collapse 
-                   activeKey={this.state.isMiddleStepCollapsed ? [] : ['1']}
-                   onChange={() => this.toggleMiddleStepCollapse()}
-                 >
-                   <Panel header="Analysis Process Details" key="1">
-                     <div style={{
-                       maxHeight: '300px',
-                       overflowY: 'auto',
-                       padding: '8px',
-                       backgroundColor: '#fafafa',
-                       fontSize: '12px',
-                       fontFamily: 'monospace',
-                       border: '1px solid #f0f0f0',
-                       borderRadius: '4px'
-                     }}>
-                       {this.state.middleStepContent.map((content, index) => (
-                         <div key={index} style={{ marginBottom: '8px', whiteSpace: 'pre-wrap' }}>
-                           {content}
-                         </div>
-                       ))}
-                     </div>
-                   </Panel>
-                 </Collapse>
-               </div>
-             )}
-             <div style={{
-               maxHeight: '100vh',
-               overflowY: 'auto',
-               border: '1px solid #f0f0f0',
-               borderRadius: '4px'
-             }}>
-               <div style={{ padding: '16px' }}>
-                 <Markdown 
-                   components={{
-                     h3: ({children}) => (
-                       <h3 style={{
-                         fontSize: '18px',
-                         fontWeight: '700',
-                       }}>
-                         {children}
-                       </h3>
-                     )
-                   }}
-                 >
-                   {analysisResult}
-                 </Markdown>
-               </div>
-             </div>
-           </div>
-         );
-      
+        return (
+          <div style={{ padding: '16px' }}>
+            {this.state.extraActionArea && (
+              <div style={{ marginBottom: '16px' }}>
+                {this.state.extraActionArea}
+              </div>
+            )}
+            {this.state.middleStepContent.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <Collapse
+                  activeKey={this.state.isMiddleStepCollapsed ? [] : ['1']}
+                  onChange={() => this.toggleMiddleStepCollapse()}
+                >
+                  <Panel header="Analysis Process Details" key="1">
+                    <div style={{
+                      maxHeight: '300px',
+                      overflowY: 'auto',
+                      padding: '8px',
+                      backgroundColor: '#fafafa',
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                      border: '1px solid #f0f0f0',
+                      borderRadius: '4px'
+                    }}>
+                      {this.state.middleStepContent.map((content, index) => (
+                        <div key={index} style={{ marginBottom: '8px', whiteSpace: 'pre-wrap' }}>
+                          {content}
+                        </div>
+                      ))}
+                    </div>
+                  </Panel>
+                </Collapse>
+              </div>
+            )}
+            <div style={{
+              maxHeight: '100vh',
+              overflowY: 'auto',
+              border: '1px solid #f0f0f0',
+              borderRadius: '4px'
+            }}>
+              <div style={{ padding: '16px' }} ref={(el) => { this.markdownRef = el; }}>
+                <Markdown
+                  components={{
+                    h3: ({ children }) => (
+                      <h3 style={{
+                        fontSize: '18px',
+                        fontWeight: '700',
+                      }}>
+                        {children}
+                      </h3>
+                    ),
+                    a: ({ href, children, ...props }) => {
+                      const isInternal = href ? this.isCurrentPageLink(href) : false;
+                      if (isInternal) {
+                        return <a href={href} {...props}>{children}</a>;
+                      } else {
+                        return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>;
+                      }
+                    },
+                  }}
+                >
+                  {analysisResult}
+                </Markdown>
+              </div>
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }

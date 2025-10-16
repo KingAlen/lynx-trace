@@ -22,6 +22,7 @@ export async function trace_analysis_impl(
     for (const item of overviewTrace) {
       task_results.push(
         lynxview_trace_analysis(
+          trace_url,
           item,
           trace_processor,
           agent_config,
@@ -38,6 +39,7 @@ export async function trace_analysis_impl(
 }
 
 async function lynxview_trace_analysis(
+  trace_url: string,
   item: OverviewTraceResult,
   trace_processor: TraceQuery,
   agent_config: AgentConfig,
@@ -63,7 +65,10 @@ async function lynxview_trace_analysis(
   const timing_flags_all = item.timing_flags_all.map(
     (item) => item.timing_flags,
   );
-  const stage_one_results_str = await Promise.all(stage_one_results);
+  const results = await Promise.all(stage_one_results);
+  const pattern = /\[(.*?)\]\((\d+)\)/g;
+  const replacement = `[$1](${trace_url}&sliceId=$2)`;
+  const stage_one_results_str = results.map(text => text.replace(pattern, replacement));
   const bundle_url = item.bundle_url;
   return {
     stage_one_results: stage_one_results_str,
