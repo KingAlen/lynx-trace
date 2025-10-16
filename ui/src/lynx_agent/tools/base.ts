@@ -40,7 +40,7 @@ export interface ToolResult {
 
 export type ToolCallArguments = Record<
   string,
-  string | number | boolean | Record<string, any> | any[] | null
+  string | number | boolean | Record<string, any> | any[] | null | any
 >;
 
 /**

@@ -57,8 +57,8 @@ export class GoogleClient extends BaseLLMClient {
       config: {
         generationConfig: config,
         systemInstruction: this.systemInstruction,
+        tools: tools,
       },
-      tools: tools,
     };
 
     return await this.client.models.generateContent(params);
@@ -128,11 +128,11 @@ export class GoogleClient extends BaseLLMClient {
         for (const part of candidate.content.parts) {
           if (part.text) {
             content += part.text;
-          } else if ((part as any).functionCall) {
+          } else if (part.functionCall) {
             toolCalls.push({
               call_id: uuidv4(),
-              name: (part as any).functionCall.name || 'tool',
-              arguments: (part as any).functionCall.args || {},
+              name: part.functionCall.name || 'tool',
+              arguments: part.functionCall.args || {},
             });
           }
         }
