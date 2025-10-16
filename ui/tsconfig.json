@@ -7,6 +7,8 @@
     "./src/service_worker/",
     "./src/bigtrace/",
     "./src/gen/",
+    "./src/lynx_agent/node/",
+    "./src/lynx_agent/koa.ts",
     "./out"
   ],
   "compilerOptions": {

@@ -1,6 +1,6 @@
 import { TraceAnalysisResult } from "../types/types";
 
-export function generate_markdown_doc(
+export function generateMarkdownDoc(
   llm_outputs: TraceAnalysisResult[],
 ): string {
   let blocks = '';

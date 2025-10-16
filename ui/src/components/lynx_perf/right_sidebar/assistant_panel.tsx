@@ -8,7 +8,7 @@ import {Button, Spin, Collapse} from 'antd';
 const { Panel } = Collapse;
 import { TraceQuery } from '../../../lynx_agent/tools/trace_query';
 import { AppImpl } from '../../../core/app_impl';
-import { generate_markdown_doc } from '../../../lynx_agent/utils/markdown_doc';
+import { generateMarkdownDoc } from '../../../lynx_agent/utils/markdown_doc';
 import AIAnalysis from '../../../plugins/lynx.AIAnalysis';
 import { AgentConfig } from '../../../lynx_agent/utils/config';
 import { QueryResult, SqlValue } from '../../../trace_processor/query_result';
@@ -198,7 +198,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       if (result.length <= 0) {
         throw new Error('Analysis failed, llm ouput is empty');
       } else {
-        const finalResult = generate_markdown_doc(result);
+        const finalResult = generateMarkdownDoc(result);
         const extraActionArea = await llmState.state.reportExtraAction?.render(result, finalResult);
 
         this.setState({ 

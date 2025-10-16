@@ -1,8 +1,24 @@
-import * as crypto from 'crypto';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
 import {getFlattenStyleTraceEvents} from './convert_trace_event_style';
+
+let crypto: any = null;
+let fs: any = null;
+let os: any = null;
+let path: any = null;
+let http: any = null;
+let url: any = null;
+
+if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+  try {
+    crypto = require('crypto');
+    fs = require('fs');
+    os = require('os');
+    path = require('path');
+    http = require('http');
+    url = require('url');
+  } catch (e) {
+    // ignore type error in browser environment
+  }
+}
 
 export async function pipelineOverviewCharts(
   traceResult: any,
@@ -24,6 +40,12 @@ export async function overviewTraceToChartUrl(
 ): Promise<string | null> {
   const overviewChartUrlPrefix =
     'https://trace-overview-diagram.gf.bytedance.net?traceData=';
+  
+  if (!crypto || !fs || !os || !path) {
+    console.warn('overviewTraceToChartUrl: Node.js modules not available in browser environment');
+    return null;
+  }
+  
   if (typeof overviewTrace === 'string') {
     overviewTrace = JSON.parse(overviewTrace);
   }
@@ -192,14 +214,17 @@ export async function uploadFileToTos(
 ): Promise<string | null> {
   return new Promise((resolve) => {
     try {
-      const http = require('http');
-      const url = require('url');
+      if (!http || !url || !fs || !path) {
+        console.warn('uploadFileToTos: Node.js modules not available in browser environment');
+        resolve(null);
+        return;
+      }
+      
       const fileContent = fs.readFileSync(filePath, 'utf-8');
 
       const boundary = '----formdata-' + Math.random().toString(36);
       const fileNameToUse = fileName || path.basename(filePath);
 
-      // 构建multipart/form-data格式的请求体
       const formData = [
         `--${boundary}`,
         `Content-Disposition: form-data; name="file"; filename="${fileNameToUse}"`,

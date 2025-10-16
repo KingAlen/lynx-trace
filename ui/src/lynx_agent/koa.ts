@@ -17,11 +17,12 @@ import {URL} from 'url';
 import {v4 as uuidv4} from 'uuid';
 import {VerboseLogger} from './utils/interface/verbose_logger';
 import {trace_analysis_impl} from './trace_analysis_impl';
-import {generate_feishu_doc, sendMessageToLark} from './utils/feishu_doc';
+import {generateFeishuDoc, sendMessageToLark} from './utils/feishu_doc';
 import {OverviewChart} from './utils/interface/overview_chart';
 import {pipelineOverviewCharts} from './utils/pipeline_overview_chart';
 import {ReportLanguage} from './utils/interface/language';
 import { TraceAnalysisRequest } from './types/types';
+import { FeishuConfig } from './utils/interface/feishu_config';
 
 const koaApp = new Koa();
 const router = new Router();
@@ -81,6 +82,15 @@ const trace_analysis = async (request: TraceAnalysisRequest) => {
   };
   const reportLanguage = new ReportLanguageImpl();
   const logger = new VerboseLoggerImpl(request.verbose);
+  const feishuConfig = new FeishuConfigImpl();
+  feishuConfig.setGlobalProperty(
+    'app_id',
+    process.env.FEISHU_APP_ID || '',
+  );
+  feishuConfig.setGlobalProperty(
+    'app_secret',
+    process.env.FEISHU_APP_SECRET || '',
+  );
   const trace_analysis_results = await trace_analysis_impl(
     request.trace_url,
     new TraceProcessorImpl(),
@@ -89,16 +99,28 @@ const trace_analysis = async (request: TraceAnalysisRequest) => {
     new OverviewChartImpl(),
     reportLanguage,
   );
-  const feishu_doc = await generate_feishu_doc(
+  const feishu_doc = await generateFeishuDoc(
     request,
     trace_analysis_results,
     logger,
+    feishuConfig,
   );
   if (request.chat_id) {
-    await sendMessageToLark(feishu_doc, request.chat_id);
+    await sendMessageToLark(feishu_doc, request.chat_id, feishuConfig);
   }
   return feishu_doc;
 };
+
+class FeishuConfigImpl implements FeishuConfig {
+  private config: Record<string, string> = {};
+
+  setGlobalProperty(key: string, value: string) {
+    this.config[key] = value;
+  }
+  getGlobalProperty(key: string): string | undefined {
+    return this.config[key];
+  }
+}
 
 class TraceProcessorImpl implements TraceQuery {
   private tp: TraceProcessor | undefined;

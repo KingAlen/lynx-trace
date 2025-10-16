@@ -1,22 +1,31 @@
 
 import {VerboseLogger} from './interface/verbose_logger';
 import {v4 as uuidv4} from 'uuid';
-import * as fs from 'fs';
 import {uploadFileToTos} from './pipeline_overview_chart';
+
+let fs: any = null;
+if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+  try {
+    fs = require('fs');
+  } catch (e) {
+    // ignore type error in browser environment
+  }
+}
 import { TraceAnalysisRequest, TraceAnalysisResult } from '../types/types';
+import { FeishuConfig } from './interface/feishu_config';
 
-const FEISHU_DOMAIN = process.env.INNER_USE
-  ? 'fsopen.bytedance.net'
-  : 'open.feishu.cn';
+const FEISHU_DOMAIN = 'open.feishu.cn';
 
-export async function generate_feishu_doc(
+export async function generateFeishuDoc(
   request: TraceAnalysisRequest,
   llm_outputs: TraceAnalysisResult[],
   logger: VerboseLogger | undefined,
+  feishuConfig: FeishuConfig,
 ): Promise<string> {
   const instanceBlocks = await buildInstancesBlocks(
     request.trace_url,
     llm_outputs,
+    feishuConfig,
     logger,
   );
   if (instanceBlocks == null) {
@@ -30,6 +39,7 @@ export async function generate_feishu_doc(
     // doc_url
     result =
       (await createFeishuDocument(
+        feishuConfig,
         firstLevelBlockIds,
         blocks,
         logger,
@@ -39,13 +49,13 @@ export async function generate_feishu_doc(
         bundleInfos,
       )) || '';
     const logFile = logger?.get_log_file_path();
-    if (logFile) {
+    if (logFile && fs && fs.appendFileSync) {
       fs.appendFileSync(logFile, `trace_analysis result: ${result}\n`);
     }
   } else {
     result = 'No markdown content found';
     const logFile = logger?.get_log_file_path();
-    if (logFile) {
+    if (logFile && fs && fs.appendFileSync) {
       fs.appendFileSync(
         logFile,
         `trace_analysis url: ${request.trace_url} error:${result}\n`,
@@ -56,13 +66,13 @@ export async function generate_feishu_doc(
 }
 
 // 获取访问令牌
-async function getTenantAccessToken(): Promise<string | null> {
+async function getTenantAccessToken(feishuConfig: FeishuConfig): Promise<string | null> {
   const url =
     'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
   const headers = {'Content-Type': 'application/json; charset=utf-8'};
   const data = {
-    app_id: process.env.FEISHU_APP_ID,
-    app_secret: process.env.FEISHU_APP_SECRET,
+    app_id: feishuConfig.getGlobalProperty('app_id') || '',
+    app_secret: feishuConfig.getGlobalProperty('app_secret') || '',
   };
   try {
     const response = await fetch(url, {
@@ -297,9 +307,10 @@ function generateTitle(bundleInfos: string[], email?: string): string {
 async function buildInstancesBlocks(
   traceUrl: string,
   llmOutputs: any[],
+  feishuConfig: FeishuConfig,
   logger?: VerboseLogger,
 ): Promise<[string[], any[]] | null> {
-  const token = await getTenantAccessToken();
+  const token = await getTenantAccessToken(feishuConfig);
   if (!token) {
     console.error('Failed to get access token');
     return null;
@@ -442,6 +453,7 @@ async function buildInstancesBlocks(
 
 // 创建飞书文档
 async function createFeishuDocument(
+  feishuConfig: FeishuConfig,
   firstLevelBlockIds: string[],
   blocks: any[],
   logger?: VerboseLogger,
@@ -450,7 +462,7 @@ async function createFeishuDocument(
   overview: boolean = false,
   bundleInfos: string[] = [],
 ): Promise<string | null> {
-  const token = await getTenantAccessToken();
+  const token = await getTenantAccessToken(feishuConfig);
   if (!token) {
     console.error('Failed to get access token');
     return null;
@@ -511,65 +523,12 @@ async function createFeishuDocument(
   }
 }
 
-async function insertContentToDoc(
-  docUrl: string,
-  content: string,
-): Promise<void> {
-  const token = await getTenantAccessToken();
-  if (!token) {
-    console.error('Failed to get access token');
-    return;
-  }
-  const [firstLevelBlockIds, blocks] = await convertMarkdownToBlock(
-    content,
-    token,
-  );
-
-  const documentId = docUrl.split('/').pop()!;
-  await insertDocumentContent(documentId, blocks, firstLevelBlockIds, token);
-}
-
-async function getDocContent(docUrl: string): Promise<string | null> {
-  const token = await getTenantAccessToken();
-  if (!token) {
-    console.error('Failed to get access token');
-    return null;
-  }
-
-  const documentId = docUrl.split('/').pop()!;
-  // 获取文档内容 URL
-  const url = `https://${FEISHU_DOMAIN}/open-apis/docx/v1/documents/${documentId}/raw_content?lang=0`;
-  const headers = {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json; charset=utf-8',
-  };
-
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers,
-    });
-    const respJson = await response.json();
-
-    if (respJson.code !== 0 || !respJson.data || !respJson.data.content) {
-      const errorMsg = `get document content failed: ${JSON.stringify(respJson)}`;
-      console.error(errorMsg);
-      return errorMsg;
-    }
-
-    return respJson.data.content;
-  } catch (error) {
-    const errorMsg = `get document content failed: ${error}`;
-    console.error(errorMsg);
-    return errorMsg;
-  }
-}
-
 async function sendMessageToLark(
   content: string,
   receiveId: string,
+  feishuConfig: FeishuConfig,
 ): Promise<string | null> {
-  const token = await getTenantAccessToken();
+  const token = await getTenantAccessToken(feishuConfig);
   if (!token) {
     console.error('Failed to get access token');
     return null;
@@ -624,7 +583,5 @@ export {
   generateTitle,
   buildInstancesBlocks,
   createFeishuDocument,
-  insertContentToDoc,
-  getDocContent,
   sendMessageToLark,
 };
