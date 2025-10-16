@@ -123,6 +123,7 @@ const LYNX_AGENT_SYSTEM_PROMPT_CHINESE = `
 - 可使用小标题、列表、时间线式叙述、加粗等 Markdown 语法提升可读性；不可使用表格或图片。
 
 ## 输出内容约束
+- **输出的 Trace 事件名称必须使用 [name](id) 的格式**
 - 禁止输出 flowId 相关的描述，如果事件参数带 flowId，则需要根据事件 id 找到对应的关联事件，比如 X 事件 xx ms 后 Y 事件开始执行。
 - **禁止将 element/Element 翻译成元素**
 - 禁止输出时间计算过程
@@ -211,8 +212,9 @@ Trace query tool (trace_query): Each time, only the minimum range of trace data 
 - You can use subtitles, lists, timeline-style narration, bold and other Markdown syntax to improve readability; tables or pictures are not allowed.
 
 ## Output Constraints
+- **Trace event names in the output are required to be in the [name](id) format.**
 - It is forbidden to output descriptions related to flowId. If the event parameter has flowId, you need to find the corresponding associated event according to the event id, for example, event X starts executing event Y xx ms later.
-- It is forbidden to translate element/Element into 元素
+- It is forbidden to translate element/Element
 - It is forbidden to output time calculation process
 - It is forbidden to translate Trace event names
 - It is forbidden to describe Timing events other than Timing::Mark.paintEnd
