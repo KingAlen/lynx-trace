@@ -267,6 +267,12 @@ export class ToolExecutor {
       this._verboseLogger?.debug(
         `[${this._agent_name}] Tool '${tool_call.name}' not found. Available tools: ${this._tools.map((tool) => tool.name)}`,
       );
+      this._verboseLogger?.updateStepStatus(
+        this._agent_name,
+        'Pipeline analysis',
+        'error',
+        `Tool '${tool_call.name}' not found. Available tools: ${this._tools.map((tool) => tool.name)}`,
+      );
       return {
         name: tool_call.name,
         success: false,
@@ -284,6 +290,14 @@ export class ToolExecutor {
           tool_call.arguments,
         )}`,
       );
+      this._verboseLogger?.updateStepStatus(
+        this._agent_name,
+        'Pipeline analysis',
+        'process',
+        `Tool '${tool_call.name}' is running with arguments ${JSON.stringify(
+          tool_call.arguments,
+        )}`,
+      );
 
       const tool_exec_result = await tool.execute(tool_call.arguments || {});
 
@@ -294,6 +308,22 @@ export class ToolExecutor {
           tool_call.arguments,
         )} , result: ${result_str}`,
       );
+
+      if (tool_exec_result.output) {
+        this._verboseLogger?.updateStepStatus(
+          this._agent_name,
+          'Pipeline analysis',
+          'process',
+          `Tool '${tool_call.name}' executed successfully`,
+        );
+      } else if (tool_exec_result.error) {
+        this._verboseLogger?.updateStepStatus(
+          this._agent_name,
+          'Pipeline analysis',
+          'error',
+          `Tool '${tool_call.name}' error: ${tool_exec_result.error}`,
+        );
+      }
 
       return {
         name: tool_call.name,

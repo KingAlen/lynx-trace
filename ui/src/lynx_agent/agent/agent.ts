@@ -9,6 +9,7 @@ import {LynxAgent} from './lynx_agent';
 export class Agent {
   private agent: LynxAgent;
   private agentConfig: AgentConfig;
+  private name: string;
 
   constructor(
     name: string,
@@ -17,6 +18,7 @@ export class Agent {
     verboseLogger: VerboseLogger,
     reportLanguage: string,
   ) {
+    this.name = name;
     this.agentConfig = config;
     this.agent = new LynxAgent(
       name,
@@ -27,11 +29,15 @@ export class Agent {
     );
   }
 
+  get agentName(): string {
+    return this.name;
+  }
+
   /**
    * Run the agent with a given task.
    */
-  async run(task: string): Promise<string> {
+  async analysisPipleline(task: string, pipeline: string): Promise<string> {
     this.agent.newTask(task);
-    return await this.agent.executeTask();
+    return await this.agent.executeTask(pipeline);
   }
 }

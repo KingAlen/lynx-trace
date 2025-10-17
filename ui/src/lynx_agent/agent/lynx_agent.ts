@@ -1,5 +1,3 @@
-import {v4 as uuidv4} from 'uuid';
-
 class AgentExecution {
   task: string;
   steps: AgentStep[] = [];
@@ -257,7 +255,7 @@ export class LynxAgent {
     this._llmClient = new LLMClient(agentConfig.model);
     this._modelConfig = agentConfig.model;
     this._maxSteps = agentConfig.max_steps;
-    this._name = name + '-' + uuidv4();
+    this._name = name;
     this._reportLanguage = reportLanguage;
 
     // Add Trace Query Tools
@@ -341,9 +339,15 @@ export class LynxAgent {
     });
   }
 
-  async executeTask(): Promise<string> {
+  async executeTask(pipeline: string): Promise<string> {
     const startTime = Date.now();
     const execution = new AgentExecution({task: this._task, steps: []});
+    this._verboseLogger?.updateStepStatus(
+      this._name,
+      'Analyze pipeline: ' + pipeline,
+      'process',
+      'begin to analysis pipeline: ' + pipeline,
+    );
     let step: AgentStep | null = null;
 
     try {
@@ -373,6 +377,12 @@ export class LynxAgent {
           break;
         }
       }
+      this._verboseLogger?.updateStepStatus(
+        this._name,
+        'Pipeline analysis',
+        'finish',
+        `pipeline analysis finish, result: ${execution.finalResult}`,
+      );
 
       if (
         stepNumber > this._maxSteps &&
@@ -381,9 +391,21 @@ export class LynxAgent {
         execution.finalResult =
           'Task execution exceeded maximum steps without completion.';
         execution.agentState = AgentState.ERROR;
+        this._verboseLogger?.updateStepStatus(
+          this._name,
+          'Pipeline analysis',
+          'finish',
+          `Task execution exceeded maximum steps without completion.`,
+        );
       }
     } catch (e) {
       execution.finalResult = `Agent execution failed: ${String(e)}`;
+      this._verboseLogger?.updateStepStatus(
+        this._name,
+        'Pipeline analysis',
+        'finish',
+        `Agent execution failed: ${String(e)}`,
+      );
     }
 
     // Ensure tool resources are released whether an exception occurs or not.
@@ -428,14 +450,30 @@ export class LynxAgent {
       this._verboseLogger?.llm_feedback(
         `[${this._name}] reasoning content: ${llmResponse.reasoning_content}`,
       );
+      this._verboseLogger?.updateStepStatus(
+        this._name,
+        'Pipeline analysis',
+        'process',
+        `LLM reasoning content: ${llmResponse.reasoning_content}`,
+      );
     }
 
-    if (llmResponse.content) {
+    if (
+      llmResponse.content &&
+      llmResponse.tool_calls &&
+      llmResponse.tool_calls.length > 0
+    ) {
       this._verboseLogger?.debug(
         `[${this._name}] LLM output content: ${llmResponse.content}`,
       );
       this._verboseLogger?.llm_feedback(
         `[${this._name}] output content: ${llmResponse.content}`,
+      );
+      this._verboseLogger?.updateStepStatus(
+        this._name,
+        'Pipeline analysis',
+        'process',
+        `get feedback from LLM, content: ${llmResponse.content}`,
       );
     }
 

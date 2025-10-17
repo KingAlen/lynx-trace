@@ -14,6 +14,7 @@ export default class AIAnalysis implements PerfettoPlugin {
   static baseUrlSetting: Setting<string>;
   static modelNameSetting: Setting<string>;
   static modelProviderSetting: Setting<string>;
+  static customPromptSetting: Setting<string>;
 
   static onActivate(app: App): void {
     AIAnalysis.modelNameSetting = app.settings.register({
@@ -47,6 +48,14 @@ export default class AIAnalysis implements PerfettoPlugin {
       name: 'Base URL',
       description:
         'The LLM base URL(optinal), such as https://ark.cn-beijing.volces.com/api/v3.',
+      schema: z.string(),
+      defaultValue: '',
+      requiresReload: true,
+    });
+    AIAnalysis.customPromptSetting = app.settings.register({
+      id: `${AIAnalysis.id}#CustomPromptSetting`,
+      name: 'Custom Prompt',
+      description: 'Custom prompt for LLM analysis.',
       schema: z.string(),
       defaultValue: '',
       requiresReload: true,

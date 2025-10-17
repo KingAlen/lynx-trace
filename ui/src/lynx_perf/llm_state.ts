@@ -16,14 +16,16 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
-import { TraceAnalysisResult } from '../lynx_agent/types/types';
+import {TraceAnalysisResult} from '../lynx_agent/types/types';
 import {createStore} from '../base/store';
+import {VerboseLogger} from '../lynx_agent/utils/interface/verbose_logger';
 
 export interface LLMConfig {
   modelProvider: string;
   modelName: string;
   apiKey: string;
   baseUrl?: string;
+  customPrompt?: string;
 }
 
 export enum ReportLanguage {
@@ -32,7 +34,11 @@ export enum ReportLanguage {
 }
 
 export interface ReportExtraAction {
-  render(results: TraceAnalysisResult[], markdownContent: string) : Promise<React.ReactNode | undefined>; 
+  render(
+    results: TraceAnalysisResult[],
+    markdownContent: string,
+    verboseLogger: VerboseLogger,
+  ): Promise<React.ReactNode | undefined>;
 }
 
 interface State {
@@ -47,6 +53,7 @@ const emptyState: State = {
     modelName: '',
     apiKey: '',
     baseUrl: '',
+    customPrompt: '',
   },
   reportLanguage: ReportLanguage.ENGLISH,
   reportExtraAction: undefined,
@@ -66,7 +73,9 @@ export function updateReportLanguage(language: ReportLanguage) {
   });
 }
 
-export function updateReportExtraAction(extraAction: ReportExtraAction | undefined) {
+export function updateReportExtraAction(
+  extraAction: ReportExtraAction | undefined,
+) {
   llmState.edit((draft) => {
     draft.reportExtraAction = extraAction;
   });

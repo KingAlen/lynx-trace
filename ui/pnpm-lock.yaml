@@ -113,6 +113,9 @@ dependencies:
   jsbn-rsa:
     specifier: ^1.0.4
     version: 1.0.4
+  lucide-react:
+    specifier: 0.294.0
+    version: 0.294.0(react@18.3.1)
   mithril:
     specifier: ^2.2.2
     version: 2.2.2
@@ -137,6 +140,9 @@ dependencies:
   react-dom:
     specifier: ^18.3.1
     version: 18.3.1(react@18.3.1)
+  react-icons:
+    specifier: 4.11.0
+    version: 4.11.0(react@18.3.1)
   react-markdown:
     specifier: ^10.1.0
     version: 10.1.0(@types/react@19.0.1)(react@18.3.1)
@@ -5645,6 +5651,14 @@ packages:
     engines: {node: '>=12'}
     dev: true
 
+  /lucide-react@0.294.0(react@18.3.1):
+    resolution: {integrity: sha512-V7o0/VECSGbLHn3/1O67FUgBwWB+hmzshrgDVRJQhMh8uj5D3HBuIvhuAmQTtlupILSplwIZg5FTc4tTKMA2SA==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0
+    dependencies:
+      react: 18.3.1
+    dev: false
+
   /magic-string@0.16.0:
     resolution: {integrity: sha512-c4BEos3y6G2qO0B9X7K0FVLOPT9uGrjYwYRLFmDqyl5YMboUviyecnXWp94fJTSMwPw2/sf+CEYt5AGpmklkkQ==}
     dependencies:
@@ -7180,6 +7194,14 @@ packages:
       loose-envify: 1.4.0
       react: 18.3.1
       scheduler: 0.23.2
+    dev: false
+
+  /react-icons@4.11.0(react@18.3.1):
+    resolution: {integrity: sha512-V+4khzYcE5EBk/BvcuYRq6V/osf11ODUM2J8hg2FDSswRrGvqiYUYPRy4OdrWaQOBj4NcpJfmHZLNaD+VH0TyA==}
+    peerDependencies:
+      react: '*'
+    dependencies:
+      react: 18.3.1
     dev: false
 
   /react-is@18.3.1:

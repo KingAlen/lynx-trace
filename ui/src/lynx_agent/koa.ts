@@ -21,8 +21,8 @@ import {generateFeishuDoc, sendMessageToLark} from './utils/feishu_doc';
 import {OverviewChart} from './utils/interface/overview_chart';
 import {pipelineOverviewCharts} from './utils/pipeline_overview_chart';
 import {ReportLanguage} from './utils/interface/language';
-import { TraceAnalysisRequest } from './types/types';
-import { FeishuConfig } from './utils/interface/feishu_config';
+import {TraceAnalysisRequest} from './types/types';
+import {FeishuConfig} from './utils/interface/feishu_config';
 
 const koaApp = new Koa();
 const router = new Router();
@@ -83,10 +83,7 @@ const trace_analysis = async (request: TraceAnalysisRequest) => {
   const reportLanguage = new ReportLanguageImpl();
   const logger = new VerboseLoggerImpl(request.verbose);
   const feishuConfig = new FeishuConfigImpl();
-  feishuConfig.setGlobalProperty(
-    'app_id',
-    process.env.FEISHU_APP_ID || '',
-  );
+  feishuConfig.setGlobalProperty('app_id', process.env.FEISHU_APP_ID || '');
   feishuConfig.setGlobalProperty(
     'app_secret',
     process.env.FEISHU_APP_SECRET || '',
@@ -408,6 +405,17 @@ class VerboseLoggerImpl implements VerboseLogger {
 
   llm_feedback(_message: string): void {
     // we have log the llm feedback in verbose mode
+  }
+
+  updateStepStatus(
+    _stepId: string,
+    _title: string,
+    _status: 'wait' | 'process' | 'finish' | 'error',
+    _content: string,
+  ) {}
+
+  getAllStepContent(): Record<string, string[]> {
+    return {};
   }
 }
 

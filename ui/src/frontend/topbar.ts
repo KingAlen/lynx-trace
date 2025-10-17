@@ -102,24 +102,25 @@ export class Topbar implements m.ClassComponent<TopbarAttrs> {
       omnibox,
       attrs.trace && m(Progress, {trace: attrs.trace}),
       sourceMapState.state.sourceMapDecodePopup?.render(),
-      m(Button, {
-        className: 'lynx-assistant',
-        label: 'Trace Analysis',
-        icon: 'robot',
-        intent: Intent.Primary,
-        onclick: (_event: Event) => {
-          if (
-            lynxPerfGlobals.state.rightSidebarTab ===
-            RightSidebarTab.TraceAssistant
-          ) {
-            lynxPerfGlobals.closeRightSidebar();
-          } else {
-            lynxPerfGlobals.changeRightSidebarTab(
-              RightSidebarTab.TraceAssistant,
-            );
-          }
-        },
-      }),
+      lynxPerfGlobals.state.lynxviewInstances.length > 0 &&
+        m(Button, {
+          className: 'lynx-assistant',
+          label: 'Trace Analysis',
+          icon: 'robot',
+          intent: Intent.Primary,
+          onclick: (_event: Event) => {
+            if (
+              lynxPerfGlobals.state.rightSidebarTab ===
+              RightSidebarTab.TraceAssistant
+            ) {
+              lynxPerfGlobals.closeRightSidebar();
+            } else {
+              lynxPerfGlobals.changeRightSidebarTab(
+                RightSidebarTab.TraceAssistant,
+              );
+            }
+          },
+        }),
       lynxPerfGlobals.state.lynxviewInstances.length > 0 &&
         m(Button, {
           className: 'lynx-menu',

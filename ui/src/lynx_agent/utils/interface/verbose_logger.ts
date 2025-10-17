@@ -6,4 +6,11 @@ export interface VerboseLogger {
   verbose_debug(message: string): void;
   llm_feedback(message: string): void;
   get_log_file_path(): string | undefined;
+  updateStepStatus(
+    stepId: string,
+    title: string,
+    status: 'wait' | 'process' | 'finish' | 'error',
+    content: string,
+  ): void;
+  getAllStepContent(): Record<string, string[]>;
 }

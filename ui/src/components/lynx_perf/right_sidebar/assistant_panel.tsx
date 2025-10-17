@@ -3,22 +3,21 @@
 // LICENSE file in the root directory of this source tree.
 
 import { Component } from 'react';
-import Markdown from 'react-markdown';
-import { Button, Spin, Collapse } from 'antd';
-const { Panel } = Collapse;
-import { TraceQuery } from '../../../lynx_agent/tools/trace_query';
+import { Button, Modal, Form, Input, Select, message } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
+const { Option } = Select;
+import {AnalysisProcess, AnalysisStep} from './ai_analysis/analysis_process';
+import {AnalysisReport} from './ai_analysis/analysis_report';
 import { AppImpl } from '../../../core/app_impl';
 import { generateMarkdownDoc } from '../../../lynx_agent/utils/markdown_doc';
 import AIAnalysis from '../../../plugins/lynx.AIAnalysis';
 import { AgentConfig } from '../../../lynx_agent/utils/config';
-import { QueryResult, SqlValue } from '../../../trace_processor/query_result';
-import { VerboseLogger } from '../../../lynx_agent/utils/interface/verbose_logger';
 import { trace_analysis_impl } from '../../../lynx_agent/trace_analysis_impl';
-import { lynxPerfGlobals } from '../../../lynx_perf/lynx_perf_globals';
-import { OverviewChart } from '../../../lynx_agent/utils/interface/overview_chart';
 import { llmState } from '../../../lynx_perf/llm_state';
 import { ReportLanguage } from '../../../lynx_agent/utils/interface/language';
 import { Router } from '../../../core/router';
+import {TraceProcessorImpl, VerboseLoggerImpl, OverviewChartImpl } from './ai_analysis/analysis_impl';
+import { STR } from '../../../trace_processor/query_result';
 
 
 interface TraceAssistantPanelState {
@@ -28,95 +27,27 @@ interface TraceAssistantPanelState {
   middleStepContent: string[];
   isMiddleStepCollapsed: boolean;
   extraActionArea?: React.ReactNode;
+  showSettingsModal: boolean;
+  currentStep: number;
+  analysisSteps: AnalysisStep[];
+  llmConfig: {
+    baseUrl: string;
+    apiKey: string;
+    modelName: string;
+    modelProvider: string;
+    customPrompt: string;
+  };
+  validationError: string;
+  isValidationPassed: boolean;
 }
 
-class TraceProcessorImpl implements TraceQuery {
-  async initProcessor(_trace_url: string) {
-    // in web page, we do not need to init trace processor
-  }
-
-  async detroyProcessor() {
-    // in web page, we do not need to detroy trace processor
-  }
-
-  async query(sql: string): Promise<Array<Record<string, SqlValue>>> {
-    const engine = AppImpl.instance.trace?.engine;
-    if (!engine) {
-      return [];
-    }
-    const result = await engine.query(sql);
-    return this.resultToArray(result);
-  }
-
-  resultToArray(result: QueryResult): Array<Record<string, SqlValue>> {
-    const columns = result.columns();
-    const rows: Array<Record<string, SqlValue>> = [];
-    for (const it = result.iter({}); it.valid(); it.next()) {
-      if (rows.length > 5000) {
-        throw new Error(
-          'Query returned too many results, max 5000 rows. Results should be aggregates rather than raw data.',
-        );
-      }
-
-      const row: { [key: string]: SqlValue } = {};
-      for (const name of columns) {
-        let value = it.get(name);
-        if (typeof value === 'bigint') {
-          value = Number(value);
-        }
-        row[name] = value;
-      }
-      rows.push(row);
-    }
-    return rows;
-  }
-}
-
-class VerboseLoggerImpl implements VerboseLogger {
-  private panelInstance?: TraceAssistantPanel;
-
-  constructor(panelInstance?: TraceAssistantPanel) {
-    this.panelInstance = panelInstance;
-  }
-
-  debug(message: string): void {
-    console.debug('debug: ' + message);
-  }
-  info(message: string): void {
-    console.info('info: ' + message);
-  }
-  warning(message: string): void {
-    console.warn('warning: ' + message);
-  }
-  error(message: string): void {
-    console.error('error: ' + message);
-  }
-  verbose_debug(message: string): void {
-    console.debug('verbose_debug: ' + message);
-  }
-  get_log_file_path(): string | undefined {
-    // in web page, we do not need to log file path
-    return undefined;
-  }
-
-  llm_feedback(message: string): void {
-    if (this.panelInstance) {
-      this.panelInstance.addMiddleStepContent("==================\n" + message);
-    }
-  }
-}
-
-class OverviewChartImpl implements OverviewChart {
-  async generateCharts(_traceResult: any): Promise<string[]> {
-    return [];
-  }
-}
 
 export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState> {
   private middleStepRef: HTMLDivElement | null = null;
   private markdownRef: HTMLDivElement | null = null;
   private markdownClick: (e: MouseEvent) => void;
   private isEventListenerAdded = false;
+  private verboseLogger: VerboseLoggerImpl;
   constructor(props: {}) {
     super(props);
     this.state = {
@@ -125,10 +56,54 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       traceUrl: window.location.href,
       middleStepContent: [],
       isMiddleStepCollapsed: false,
-      extraActionArea: undefined
+      extraActionArea: undefined,
+      showSettingsModal: false,
+      currentStep: 0,
+      analysisSteps: [
+      ],
+      llmConfig: {
+        baseUrl: '',
+        apiKey: '',
+        modelName: '',
+        modelProvider: '',
+        customPrompt: ''
+      },
+      validationError: '',
+      isValidationPassed: false
     };
     this.markdownClick = this.handleMarkdownClick.bind(this);
+    this.verboseLogger = new VerboseLoggerImpl(this);
   }
+
+  async componentDidMount() {
+    await this.performValidation();
+  }
+
+  performValidation = async () => {
+    const isLynxVersionValid = await this.validateLynxVersion();
+    if (!isLynxVersionValid) {
+      this.setState({
+        validationError: 'Use Lynx SDK version 3.6.3 or above to enable AI analysis.',
+        isValidationPassed: false
+      });
+      return;
+    }
+
+    const isLLMConfigValid = this.validateLLMConfig();
+    if (!isLLMConfigValid) {
+      this.setState({
+        validationError: 'Add LLM configuration in Settings to enable AI analysis.',
+        isValidationPassed: false
+      });
+      this.showSettings();
+      return;
+    }
+
+    this.setState({
+      validationError: '',
+      isValidationPassed: true
+    });
+  };
 
   private isCurrentPageLink(href: string) {
     try {
@@ -206,7 +181,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     this.removeMarkdownClickListener();
   }
 
-  getLLMConfig = () => {
+  private getLLMConfig = () => {
     const modelProvider = AIAnalysis.modelProviderSetting.get();
     const modelName = AIAnalysis.modelNameSetting.get();
     const apiKey = AIAnalysis.APIKeySetting.get();
@@ -242,7 +217,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     const reportLanguage: ReportLanguage = {
       localLanguage: () => llmState.state.reportLanguage,
     }
-    return await trace_analysis_impl(window.location.href, new TraceProcessorImpl(), config, new VerboseLoggerImpl(this), new OverviewChartImpl(), reportLanguage);
+    return await trace_analysis_impl(window.location.href, new TraceProcessorImpl(), config, this.verboseLogger, new OverviewChartImpl(), reportLanguage);
   }
 
   addMiddleStepContent = (message: string) => {
@@ -251,13 +226,42 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     }));
   };
 
+  updateStepStatus = (stepId: string, title: string, status: 'wait' | 'process' | 'finish' | 'error', content: string) => {
+    this.setState(prevState => {
+      const existingStepIndex = prevState.analysisSteps.findIndex(step => 
+        step.id === stepId || step.title.toLowerCase().includes(stepId.toLowerCase())
+      );
+      
+      if (existingStepIndex !== -1) {
+        // update current step
+        const updatedSteps = [...prevState.analysisSteps];
+        updatedSteps[existingStepIndex] = {
+          ...updatedSteps[existingStepIndex],
+          status,
+          details: content ? [...updatedSteps[existingStepIndex].details, content] : updatedSteps[existingStepIndex].details
+        };
+        return { analysisSteps: updatedSteps };
+      } else {
+        // add new step
+        const newStep: AnalysisStep = {
+          id: stepId,
+          title: title,
+          status: status,
+          details: content ? [content] : [],
+          collapsed: false
+        };
+        return { analysisSteps: [...prevState.analysisSteps, newStep] };
+      }
+    });
+  };
+
   toggleMiddleStepCollapse = () => {
     this.setState(prevState => ({
       isMiddleStepCollapsed: !prevState.isMiddleStepCollapsed
     }));
   };
 
-  handleYesClick = async () => {
+  private triggerTraceAIAnalysis = async () => {
     this.setState({
       status: 'analyzing',
       middleStepContent: [],
@@ -268,9 +272,11 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       if (result.length <= 0) {
         throw new Error('Analysis failed, llm ouput is empty');
       } else {
+        this.verboseLogger.updateStepStatus('generate-report', 'Generate report', 'process', "Begin to generate final report");
         const finalResult = generateMarkdownDoc(result);
-        const extraActionArea = await llmState.state.reportExtraAction?.render(result, finalResult);
-
+        const extraActionArea = await llmState.state.reportExtraAction?.render(result, finalResult, this.verboseLogger);
+        this.verboseLogger.updateStepStatus('generate-report', 'Generate report', 'finish', "Final report generated");
+        
         this.setState({
           status: 'completed',
           analysisResult: finalResult,
@@ -289,133 +295,272 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     }
   };
 
-  handleNoClick = () => {
-    lynxPerfGlobals.closeRightSidebar();
+
+  showSettings = () => {
+    this.setState({
+      showSettingsModal: true,
+      llmConfig: {
+        baseUrl: AIAnalysis.baseUrlSetting.get() || '',
+        apiKey: AIAnalysis.APIKeySetting.get() || '',
+        modelName: AIAnalysis.modelNameSetting.get() || '',
+        modelProvider: AIAnalysis.modelProviderSetting.get() || '',
+        customPrompt: AIAnalysis.customPromptSetting.get() || ''
+      }
+    });
+  };
+
+  hideSettings = () => {
+    this.setState({ showSettingsModal: false });
+  };
+
+  saveSettings = async () => {
+    const { llmConfig } = this.state;
+    AIAnalysis.baseUrlSetting.set(llmConfig.baseUrl);
+    AIAnalysis.APIKeySetting.set(llmConfig.apiKey);
+    AIAnalysis.modelNameSetting.set(llmConfig.modelName);
+    AIAnalysis.modelProviderSetting.set(llmConfig.modelProvider);
+    AIAnalysis.customPromptSetting.set(llmConfig.customPrompt);
+    
+    message.success('Save Settings Successfully');
+    this.hideSettings();
+    
+    await this.performValidation();
+  };
+
+  updateLLMConfig = (field: string, value: string) => {
+    this.setState({
+      llmConfig: {
+        ...this.state.llmConfig,
+        [field]: value
+      }
+    });
+  };
+
+  validateLynxVersion = async (): Promise<boolean> => {
+     const engine = AppImpl.instance.trace?.engine;
+    if (!engine) {
+      return true;
+    }
+    const result = await engine.query(`select args.display_value from slice join args on args.arg_set_id=slice.arg_set_id where slice.name='LynxEngineVersion' and args.key='debug.version'`);
+    const version = result.numRows() > 0 ? result.firstRow({display_value: STR}).display_value : '';
+    return version >= '3.4.3';
+  };
+
+  validateLLMConfig = (): boolean => {
+    const config = this.getLLMConfig();
+    return !!(config.apiKey && config.modelName && config.modelProvider);
+  };
+
+  startAnalysis = async () => {
+    this.triggerTraceAIAnalysis();
+  };
+
+  restartAnalysis = () => {
+    this.resetToInitial();
+    this.triggerTraceAIAnalysis();
+  };
+
+  resetToInitial = () => {
+    this.setState({
+      status: 'initial',
+      analysisResult: '',
+      middleStepContent: [],
+      isMiddleStepCollapsed: false,
+      extraActionArea: undefined,
+      currentStep: 0,
+      analysisSteps: []
+    });
   };
 
   renderContent = () => {
-    const { status, analysisResult } = this.state;
+    const { status, showSettingsModal, llmConfig } = this.state;
 
     switch (status) {
       case 'initial':
         return (
-          <div style={{ padding: '16px' }}>
-            <p>Do you need to perform AI analysis on the current Trace?</p>
-            <div style={{ marginTop: '12px' }}>
+          <div style={{ 
+            padding: '24px', 
+            textAlign: 'center',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            backgroundColor: '#fafafa'
+          }}>
+            <div style={{ marginBottom: '32px' }}>
+              <h2 style={{ 
+                fontSize: '24px', 
+                fontWeight: '600', 
+                color: '#262626',
+                marginBottom: '16px'
+              }}>
+                AI Trace Analysis
+              </h2>
+              <p style={{ 
+                fontSize: '14px', 
+                color: '#8c8c8c',
+                lineHeight: '1.5'
+              }}>
+                Analyze your trace with AI to identify performance bottlenecks and optimization opportunities
+              </p>
+            </div>
+            
+            <div style={{ marginBottom: '24px' }}>
               <Button
                 type="primary"
-                onClick={this.handleYesClick}
-                style={{ marginRight: '8px' }}
+                size="large"
+                onClick={this.startAnalysis}
+                disabled={!this.state.isValidationPassed}
+                style={{ 
+                  height: '48px',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  borderRadius: '6px',
+                  minWidth: '160px'
+                }}
               >
-                Yes
+                Start Analysis
               </Button>
-              <Button onClick={this.handleNoClick}>
-                No
+              
+              {this.state.validationError && (
+                <div style={{
+                  marginTop: '12px',
+                  color: '#ff4d4f',
+                  fontSize: '14px',
+                  textAlign: 'center'
+                }}>
+                  {this.state.validationError}
+                </div>
+              )}
+            </div>
+            
+            <div style={{ position: 'absolute', top: '16px', right: '16px' }}>
+              <Button
+                type="text"
+                icon={<SettingOutlined />}
+                onClick={this.showSettings}
+                style={{ 
+                  fontSize: '14px',
+                  color: '#8c8c8c'
+                }}
+              >
+                Settings
               </Button>
             </div>
+            
+            <Modal
+              title="LLM Configuration"
+              open={showSettingsModal}
+              onOk={this.saveSettings}
+              onCancel={this.hideSettings}
+              width={600}
+              okText="Save"
+              cancelText="Cancel"
+            >
+              <Form layout="vertical" style={{ marginTop: '16px' }}>
+                <Form.Item label="Model Provider">
+                  <Select
+                    value={llmConfig.modelProvider || undefined}
+                    onChange={(value) => this.updateLLMConfig('modelProvider', value)}
+                    placeholder="Select model provider"
+                  >
+                    <Option value="doubao">Doubao</Option>
+                    <Option value="deepseek">Deepseek</Option>
+                    <Option value="openai">OpenAI</Option>
+                    <Option value="gemini">Google Gemini</Option>
+                  </Select>
+                </Form.Item>
+                
+                <Form.Item label="Model Name">
+                  <Input
+                    value={llmConfig.modelName}
+                    onChange={(e) => this.updateLLMConfig('modelName', e.target.value)}
+                    placeholder="e.g., seed-1.6, gpt-5, gemini-2.5-pro"
+                  />
+                </Form.Item>
+                
+                <Form.Item label="API Key">
+                  <Input.Password
+                    value={llmConfig.apiKey}
+                    onChange={(e) => this.updateLLMConfig('apiKey', e.target.value)}
+                    placeholder="Enter your API key"
+                  />
+                </Form.Item>
+                
+                <Form.Item label="Base URL (Optional)">
+                  <Input
+                    value={llmConfig.baseUrl}
+                    onChange={(e) => this.updateLLMConfig('baseUrl', e.target.value)}
+                    placeholder="e.g., https://ark.cn-beijing.volces.com/api/v3"
+                  />
+                </Form.Item>
+                
+                <Form.Item label="Custom Prompt (Optional)">
+                  <Input.TextArea
+                    value={llmConfig.customPrompt}
+                    onChange={(e) => this.updateLLMConfig('customPrompt', e.target.value)}
+                    placeholder="Enter your custom analysis prompt to provide the AI with additional context about the current Trace, such as custom trace events and descriptions."
+                    rows={5}
+                  />
+                </Form.Item>
+              </Form>
+            </Modal>
           </div>
         );
 
       case 'analyzing':
         return (
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ textAlign: 'center', padding: '16px' }}>
-              <Spin size="large" />
-              <p style={{ marginTop: '12px' }}>
-                Analysis in progress......
-              </p>
-            </div>
-            {this.state.middleStepContent.length > 0 && (
-              <div
-                ref={(el) => { this.middleStepRef = el; }}
-                style={{
-                  flex: 1,
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  backgroundColor: '#fafafa',
-                  fontSize: '12px',
-                  padding: '8px',
-                  fontFamily: 'monospace',
-                  border: '1px solid #f0f0f0',
-                  borderRadius: '4px',
-                  wordWrap: 'break-word'
-                }}
-              >
-                {this.state.middleStepContent.map((content, index) => (
-                  <div key={index} style={{ marginBottom: '8px', whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
-                    {content}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-
+           <div style={{ height: '100%', overflowY: 'auto', padding: '16px' }}>
+               <AnalysisProcess steps={this.state.analysisSteps} />
+           </div>
+        )
       case 'completed':
         return (
-          <div style={{ padding: '16px' }}>
-            {this.state.extraActionArea && (
-              <div style={{ marginBottom: '16px' }}>
-                {this.state.extraActionArea}
-              </div>
-            )}
-            {this.state.middleStepContent.length > 0 && (
-              <div style={{ marginBottom: '16px' }}>
-                <Collapse
-                  activeKey={this.state.isMiddleStepCollapsed ? [] : ['1']}
-                  onChange={() => this.toggleMiddleStepCollapse()}
-                >
-                  <Panel header="Analysis Process Details" key="1">
-                    <div style={{
-                      maxHeight: '300px',
-                      overflowY: 'auto',
-                      padding: '8px',
-                      backgroundColor: '#fafafa',
-                      fontSize: '12px',
-                      fontFamily: 'monospace',
-                      border: '1px solid #f0f0f0',
-                      borderRadius: '4px'
-                    }}>
-                      {this.state.middleStepContent.map((content, index) => (
-                        <div key={index} style={{ marginBottom: '8px', whiteSpace: 'pre-wrap' }}>
-                          {content}
-                        </div>
-                      ))}
-                    </div>
-                  </Panel>
-                </Collapse>
-              </div>
-            )}
-            <div style={{
-              maxHeight: '100vh',
-              overflowY: 'auto',
-              border: '1px solid #f0f0f0',
-              borderRadius: '4px'
+          <div style={{ height: '100%', overflowY: 'auto', padding: '16px' }}>
+            <div style={{ marginBottom: '24px' }}>
+              <AnalysisProcess steps={this.state.analysisSteps} />
+            </div>
+            
+            {/* Report */}
+            <div style={{ marginBottom: '24px' }}>
+              <AnalysisReport 
+                analysisResult={this.state.analysisResult}
+                extraActionArea={this.state.extraActionArea}
+                markdownRef={(ref) => { this.markdownRef = ref; }}
+              />
+            </div>
+            
+            {/* Operation Area */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              gap: '16px',
+              paddingTop: '16px',
+              borderTop: '1px solid #f0f0f0'
             }}>
-              <div style={{ padding: '16px' }} ref={(el) => { this.markdownRef = el; }}>
-                <Markdown
-                  components={{
-                    h3: ({ children }) => (
-                      <h3 style={{
-                        fontSize: '18px',
-                        fontWeight: '700',
-                      }}>
-                        {children}
-                      </h3>
-                    ),
-                    a: ({ href, children, ...props }) => {
-                      const isInternal = href ? this.isCurrentPageLink(href) : false;
-                      if (isInternal) {
-                        return <a href={href} {...props}>{children}</a>;
-                      } else {
-                        return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>;
-                      }
-                    },
-                  }}
-                >
-                  {analysisResult}
-                </Markdown>
-              </div>
+              <Button 
+                type="primary"
+                size="large"
+                onClick={this.restartAnalysis}
+                style={{
+                  minWidth: '120px',
+                  height: '40px',
+                  fontSize: '14px'
+                }}
+              >
+                Analyze Again
+              </Button>
+              <Button 
+                size="large"
+                onClick={this.resetToInitial}
+                style={{
+                  minWidth: '120px',
+                  height: '40px',
+                  fontSize: '14px'
+                }}
+              >
+                Reset
+              </Button>
             </div>
           </div>
         );
