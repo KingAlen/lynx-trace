@@ -447,9 +447,6 @@ export class LynxAgent {
       this._verboseLogger?.debug(
         `[${this._name}] LLM reasoning_content: ${llmResponse.reasoning_content}`,
       );
-      this._verboseLogger?.llm_feedback(
-        `[${this._name}] reasoning content: ${llmResponse.reasoning_content}`,
-      );
       this._verboseLogger?.updateStepStatus(
         this._name,
         'Pipeline analysis',
@@ -465,9 +462,6 @@ export class LynxAgent {
     ) {
       this._verboseLogger?.debug(
         `[${this._name}] LLM output content: ${llmResponse.content}`,
-      );
-      this._verboseLogger?.llm_feedback(
-        `[${this._name}] output content: ${llmResponse.content}`,
       );
       this._verboseLogger?.updateStepStatus(
         this._name,

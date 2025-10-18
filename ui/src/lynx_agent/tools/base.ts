@@ -285,11 +285,6 @@ export class ToolExecutor {
     const tool = this.tools[normalized_name];
 
     try {
-      this._verboseLogger?.llm_feedback(
-        `[${this._agent_name}] will execute Tool '${tool_call.name}' with arguments ${JSON.stringify(
-          tool_call.arguments,
-        )}`,
-      );
       this._verboseLogger?.updateStepStatus(
         this._agent_name,
         'Pipeline analysis',

@@ -6,29 +6,26 @@ import { Component } from 'react';
 import { Button, Modal, Form, Input, Select, message } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 const { Option } = Select;
-import {AnalysisProcess, AnalysisStep} from './ai_analysis/analysis_process';
-import {AnalysisReport} from './ai_analysis/analysis_report';
+import {AnalysisProcess} from './ai_analysis/analysis_process';
+import {AnalysisReportComponent} from './ai_analysis/analysis_report';
 import { AppImpl } from '../../../core/app_impl';
 import { generateMarkdownDoc } from '../../../lynx_agent/utils/markdown_doc';
 import AIAnalysis from '../../../plugins/lynx.AIAnalysis';
 import { AgentConfig } from '../../../lynx_agent/utils/config';
 import { trace_analysis_impl } from '../../../lynx_agent/trace_analysis_impl';
-import { llmState } from '../../../lynx_perf/llm_state';
+import { AnalysisReport, AnalysisStep, llmState } from '../../../lynx_perf/llm_state';
 import { ReportLanguage } from '../../../lynx_agent/utils/interface/language';
 import { Router } from '../../../core/router';
 import {TraceProcessorImpl, VerboseLoggerImpl, OverviewChartImpl } from './ai_analysis/analysis_impl';
 import { STR } from '../../../trace_processor/query_result';
 
 
-interface TraceAssistantPanelState {
+export interface TraceAssistantPanelState {
   status: 'initial' | 'analyzing' | 'completed';
   analysisResult: string;
-  traceUrl: string;
-  middleStepContent: string[];
-  isMiddleStepCollapsed: boolean;
   extraActionArea?: React.ReactNode;
+  extraActionProperties: Record<string, string>;
   showSettingsModal: boolean;
-  currentStep: number;
   analysisSteps: AnalysisStep[];
   llmConfig: {
     baseUrl: string;
@@ -43,7 +40,6 @@ interface TraceAssistantPanelState {
 
 
 export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState> {
-  private middleStepRef: HTMLDivElement | null = null;
   private markdownRef: HTMLDivElement | null = null;
   private markdownClick: (e: MouseEvent) => void;
   private isEventListenerAdded = false;
@@ -53,12 +49,9 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     this.state = {
       status: 'initial',
       analysisResult: '',
-      traceUrl: window.location.href,
-      middleStepContent: [],
-      isMiddleStepCollapsed: false,
       extraActionArea: undefined,
+      extraActionProperties: {},
       showSettingsModal: false,
-      currentStep: 0,
       analysisSteps: [
       ],
       llmConfig: {
@@ -77,6 +70,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
 
   async componentDidMount() {
     await this.performValidation();
+    await this.restorePrevReportStatus();
   }
 
   performValidation = async () => {
@@ -103,6 +97,35 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       validationError: '',
       isValidationPassed: true
     });
+  };
+
+  restorePrevReportStatus = async () => {
+    const prevAnalysisResult = await llmState.state.reportExtraAction?.getHistoryAnalysisReport();
+
+    if (prevAnalysisResult && this.state.status == 'initial') {
+          console.log('prevAnalysisResult', JSON.stringify(prevAnalysisResult));
+      const extraActionArea = await llmState.state.reportExtraAction?.render(undefined, undefined, prevAnalysisResult.extraActionProperties);
+      this.setState({
+        ...this.state,
+        status: 'completed',
+        analysisResult: prevAnalysisResult.analysisResult,
+        analysisSteps: prevAnalysisResult.analysisSteps,
+        extraActionArea: extraActionArea,
+        extraActionProperties: prevAnalysisResult.extraActionProperties,
+      });
+    } else {
+      console.log('empty  prevAnalysisResult');
+    }
+  };
+
+  saveCurrentReportStatus = async () => {
+    const { analysisResult, analysisSteps, extraActionProperties } = this.state;
+    const report: AnalysisReport = {
+      analysisResult,
+      analysisSteps,
+      extraActionProperties,
+    };
+    await llmState.state.reportExtraAction?.saveHistoryAnalysisReport(report);
   };
 
   private isCurrentPageLink(href: string) {
@@ -141,14 +164,6 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
   };
 
   componentDidUpdate(_prevProps: {}, prevState: TraceAssistantPanelState) {
-    if (
-      this.state.status === 'analyzing' &&
-      this.state.middleStepContent.length > prevState.middleStepContent.length &&
-      this.middleStepRef
-    ) {
-      this.middleStepRef.scrollTop = this.middleStepRef.scrollHeight;
-    }
-
     if (
       this.state.status === 'completed' &&
       this.markdownRef &&
@@ -220,12 +235,6 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     return await trace_analysis_impl(window.location.href, new TraceProcessorImpl(), config, this.verboseLogger, new OverviewChartImpl(), reportLanguage);
   }
 
-  addMiddleStepContent = (message: string) => {
-    this.setState(prevState => ({
-      middleStepContent: [...prevState.middleStepContent, message]
-    }));
-  };
-
   updateStepStatus = (stepId: string, title: string, status: 'wait' | 'process' | 'finish' | 'error', content: string) => {
     this.setState(prevState => {
       const existingStepIndex = prevState.analysisSteps.findIndex(step => 
@@ -255,17 +264,9 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     });
   };
 
-  toggleMiddleStepCollapse = () => {
-    this.setState(prevState => ({
-      isMiddleStepCollapsed: !prevState.isMiddleStepCollapsed
-    }));
-  };
-
   private triggerTraceAIAnalysis = async () => {
     this.setState({
       status: 'analyzing',
-      middleStepContent: [],
-      isMiddleStepCollapsed: false
     });
     try {
       const result = await this.traceAnalysis();
@@ -274,14 +275,20 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       } else {
         this.verboseLogger.updateStepStatus('generate-report', 'Generate report', 'process', "Begin to generate final report");
         const finalResult = generateMarkdownDoc(result);
-        const extraActionArea = await llmState.state.reportExtraAction?.render(result, finalResult, this.verboseLogger);
+        const extraActionArea = await llmState.state.reportExtraAction?.render(result, this.verboseLogger.getAllStepContent(), {});
         this.verboseLogger.updateStepStatus('generate-report', 'Generate report', 'finish', "Final report generated");
         
         this.setState({
           status: 'completed',
           analysisResult: finalResult,
-          isMiddleStepCollapsed: true,
-          extraActionArea: extraActionArea
+          extraActionArea: extraActionArea,
+          extraActionProperties: llmState.state.reportExtraAction?.getActionProperties() || {}
+        }, async () => {
+          await llmState.state.reportExtraAction?.saveHistoryAnalysisReport({
+            analysisResult: this.state.analysisResult,
+            extraActionProperties: this.state.extraActionProperties,
+            analysisSteps: this.state.analysisSteps,
+          });
         });
       }
     } catch (error) {
@@ -289,7 +296,6 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       this.setState({
         status: 'completed',
         analysisResult: 'Analysis failed, please try again later.',
-        isMiddleStepCollapsed: true,
         extraActionArea: undefined
       });
     }
@@ -364,10 +370,8 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     this.setState({
       status: 'initial',
       analysisResult: '',
-      middleStepContent: [],
-      isMiddleStepCollapsed: false,
       extraActionArea: undefined,
-      currentStep: 0,
+      extraActionProperties: {},
       analysisSteps: []
     });
   };
@@ -523,7 +527,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
             
             {/* Report */}
             <div style={{ marginBottom: '24px' }}>
-              <AnalysisReport 
+              <AnalysisReportComponent 
                 analysisResult={this.state.analysisResult}
                 extraActionArea={this.state.extraActionArea}
                 markdownRef={(ref) => { this.markdownRef = ref; }}

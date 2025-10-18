@@ -1,13 +1,8 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, CheckCircle, Circle, Loader } from 'lucide-react';
+import { AnalysisStep } from '../../../../lynx_perf/llm_state';
 
-export interface AnalysisStep {
-  id: string;
-  title: string;
-  status: 'wait' | 'process' | 'finish' | 'error';
-  details: string[];
-  collapsed?: boolean;
-}
+
 
 interface AnalysisProcessProps {
   steps: AnalysisStep[];

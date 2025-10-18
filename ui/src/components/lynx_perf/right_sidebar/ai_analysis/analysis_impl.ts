@@ -4,6 +4,8 @@ import {VerboseLogger} from '../../../../lynx_agent/utils/interface/verbose_logg
 import {TraceQuery} from '../../../../lynx_agent/tools/trace_query';
 import {AppImpl} from '../../../../core/app_impl';
 import {TraceAssistantPanel} from '../assistant_panel';
+import {OverviewTraceResult} from '../../../../lynx_agent/utils/overview_trace';
+import {llmState} from '../../../../lynx_perf/llm_state';
 
 export class TraceProcessorImpl implements TraceQuery {
   async initProcessor(_trace_url: string) {
@@ -75,12 +77,6 @@ export class VerboseLoggerImpl implements VerboseLogger {
     return undefined;
   }
 
-  llm_feedback(message: string): void {
-    if (this.panelInstance) {
-      this.panelInstance.addMiddleStepContent('==================\n' + message);
-    }
-  }
-
   getAllStepContent(): Record<string, string[]> {
     return this.stepContent;
   }
@@ -100,7 +96,10 @@ export class VerboseLoggerImpl implements VerboseLogger {
 }
 
 export class OverviewChartImpl implements OverviewChart {
-  async generateCharts(_traceResult: any): Promise<string[]> {
-    return [];
+  async generateCharts(traceResult: OverviewTraceResult): Promise<string[]> {
+    return (
+      (await llmState.state.reportExtraAction?.generateCharts(traceResult)) ||
+      []
+    );
   }
 }

@@ -403,10 +403,6 @@ class VerboseLoggerImpl implements VerboseLogger {
     return this.logFile;
   }
 
-  llm_feedback(_message: string): void {
-    // we have log the llm feedback in verbose mode
-  }
-
   updateStepStatus(
     _stepId: string,
     _title: string,

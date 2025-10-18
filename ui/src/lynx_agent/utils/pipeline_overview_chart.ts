@@ -1,4 +1,5 @@
 import {getFlattenStyleTraceEvents} from './convert_trace_event_style';
+import {fetchWithTimeout} from '../../base/http_utils';
 
 let crypto: any = null;
 let fs: any = null;
@@ -7,7 +8,11 @@ let path: any = null;
 let http: any = null;
 let url: any = null;
 
-if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+if (
+  typeof process !== 'undefined' &&
+  process.versions &&
+  process.versions.node
+) {
   try {
     crypto = require('crypto');
     fs = require('fs');
@@ -40,12 +45,7 @@ export async function overviewTraceToChartUrl(
 ): Promise<string | null> {
   const overviewChartUrlPrefix =
     'https://trace-overview-diagram.gf.bytedance.net?traceData=';
-  
-  if (!crypto || !fs || !os || !path) {
-    console.warn('overviewTraceToChartUrl: Node.js modules not available in browser environment');
-    return null;
-  }
-  
+
   if (typeof overviewTrace === 'string') {
     overviewTrace = JSON.parse(overviewTrace);
   }
@@ -54,18 +54,59 @@ export async function overviewTraceToChartUrl(
   // save to local file
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const chartEventsStr = JSON.stringify(charEvents);
-  const chartEventsHash = crypto
-    .createHash('md5')
-    .update(chartEventsStr)
-    .digest('hex');
-  const fileName = `${timestamp}_${chartEventsHash}.json`;
-  const localFilePath = path.join(os.tmpdir(), fileName);
-  fs.writeFileSync(localFilePath, chartEventsStr);
-  const tosUrl = await uploadFileToTos(localFilePath);
-  if (!tosUrl) {
-    return null;
+
+  if (!crypto || !fs || !os || !path) {
+    // for browser environment
+    const randomNum = Math.random() * 100000 + 1;
+    const pipelineFileName = `trace_pipeline-${randomNum}-${timestamp}.log`;
+    const pipelineFile = new File([chartEventsStr], pipelineFileName, {
+      type: 'text/plain',
+    });
+    const pipelineFileUrl = await uploadContentToTos(
+      pipelineFile,
+      pipelineFileName,
+    );
+    return overviewChartUrlPrefix + encodeURIComponent(pipelineFileUrl);
+  } else {
+    // for node.js environment
+    const chartEventsHash = crypto
+      .createHash('md5')
+      .update(chartEventsStr)
+      .digest('hex');
+    const fileName = `${timestamp}_${chartEventsHash}.json`;
+    const localFilePath = path.join(os.tmpdir(), fileName);
+    fs.writeFileSync(localFilePath, chartEventsStr);
+    const tosUrl = await uploadFileToTos(localFilePath);
+    if (!tosUrl) {
+      return null;
+    }
+    return overviewChartUrlPrefix + encodeURIComponent(tosUrl);
   }
-  return overviewChartUrlPrefix + encodeURIComponent(tosUrl);
+}
+
+async function uploadContentToTos(
+  file: File,
+  filename: string,
+): Promise<string> {
+  const requestUrl = 'https://y65nq31v.fn.bytedance.net';
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('relativePath', 'trace_files');
+  formData.append('filename', filename);
+
+  const response = await fetchWithTimeout(
+    `${requestUrl}/uploadToTOS`,
+    {
+      method: 'post',
+      body: formData,
+    },
+    -1,
+  );
+  const res = await response.json();
+  if (res['code'] === 0) {
+    return res['message'];
+  }
+  return '';
 }
 
 export function convertToChartTraceEvent(traceEvents: any[]): any[] {
@@ -215,11 +256,13 @@ export async function uploadFileToTos(
   return new Promise((resolve) => {
     try {
       if (!http || !url || !fs || !path) {
-        console.warn('uploadFileToTos: Node.js modules not available in browser environment');
+        console.warn(
+          'uploadFileToTos: Node.js modules not available in browser environment',
+        );
         resolve(null);
         return;
       }
-      
+
       const fileContent = fs.readFileSync(filePath, 'utf-8');
 
       const boundary = '----formdata-' + Math.random().toString(36);

@@ -18,7 +18,7 @@
 
 import {TraceAnalysisResult} from '../lynx_agent/types/types';
 import {createStore} from '../base/store';
-import {VerboseLogger} from '../lynx_agent/utils/interface/verbose_logger';
+import {OverviewTraceResult} from '../lynx_agent/utils/overview_trace';
 
 export interface LLMConfig {
   modelProvider: string;
@@ -33,12 +33,34 @@ export enum ReportLanguage {
   CHINESE = 'zh',
 }
 
+export interface AnalysisStep {
+  id: string;
+  title: string;
+  status: 'wait' | 'process' | 'finish' | 'error';
+  details: string[];
+  collapsed?: boolean;
+}
+
+export interface AnalysisReport {
+  analysisResult: string;
+  extraActionProperties: Record<string, string>;
+  analysisSteps: AnalysisStep[];
+}
+
 export interface ReportExtraAction {
   render(
-    results: TraceAnalysisResult[],
-    markdownContent: string,
-    verboseLogger: VerboseLogger,
+    results: TraceAnalysisResult[] | undefined,
+    stepContent: Record<string, string[]> | undefined,
+    actionProperties: Record<string, string> | undefined,
   ): Promise<React.ReactNode | undefined>;
+
+  getActionProperties(): Record<string, string> | undefined;
+
+  getHistoryAnalysisReport(): Promise<AnalysisReport | undefined>;
+
+  saveHistoryAnalysisReport(result: AnalysisReport): Promise<boolean>;
+
+  generateCharts(traceResult: OverviewTraceResult): Promise<string[]>;
 }
 
 interface State {

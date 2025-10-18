@@ -12,7 +12,7 @@ interface AnalysisReportProps {
   extraActionArea?: React.ReactNode;
 }
 
-export class AnalysisReport extends Component<AnalysisReportProps> {
+export class AnalysisReportComponent extends Component<AnalysisReportProps> {
   render() {
     const { analysisResult, markdownRef, extraActionArea } = this.props;
 
@@ -69,4 +69,4 @@ export class AnalysisReport extends Component<AnalysisReportProps> {
   }
 }
 
-export default AnalysisReport;
+export default AnalysisReportComponent;
