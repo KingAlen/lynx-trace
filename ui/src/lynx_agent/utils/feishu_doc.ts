@@ -43,7 +43,7 @@ export async function generateFeishuDoc(
         firstLevelBlockIds,
         blocks,
         logger,
-        request.chat_id,
+        request.email,
         request.union_id,
         request.overview,
         bundleInfos,

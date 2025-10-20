@@ -48,6 +48,8 @@ export async function trace_analysis_impl(
       );
     }
     return await Promise.all(task_results);
+  } catch (error) {
+    throw error;
   } finally {
     await trace_processor.detroyProcessor();
   }
