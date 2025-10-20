@@ -273,25 +273,15 @@ class TraceProcessorImpl implements TraceQuery {
       }
 
       // Search from fragment
-      let fragment = parsed.hash;
-      if (fragment.startsWith('#!')) {
-        fragment = fragment.substring(2);
-      } else if (fragment.startsWith('#')) {
-        fragment = fragment.substring(1);
-      }
-
-      if (fragment) {
-        try {
-          const fragParsed = new URL(fragment, '');
-          const fragUrlParam = fragParsed.searchParams.get('url');
-          if (fragUrlParam) {
-            return decodeURIComponent(fragUrlParam);
-          }
-        } catch {
-          // Ignore fragment parsing errors
+      const queryUrlIndex = url.indexOf('?');
+      if (queryUrlIndex != -1) {
+        const queryString = url.substring(queryUrlIndex + 1);
+        const params = new URLSearchParams(queryString);
+        const encodedUrl = params.get('url');
+        if (encodedUrl) {
+          return decodeURIComponent(encodedUrl);
         }
       }
-
       return url;
     } catch {
       return url;
