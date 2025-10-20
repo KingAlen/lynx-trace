@@ -108,7 +108,7 @@ export async function getReadableTrace(
     }
 
     // Remove 'debug.' prefix from key
-    const cleanKey = key.startsWith('debug.') ? key.substring(6) : key;
+    const cleanKey = (key && key.startsWith('debug.')) ? key.substring(6) : key;
     if (cleanKey === 'url') {
       continue;
     }
