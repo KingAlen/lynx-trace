@@ -16,6 +16,7 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
+import { RIGHT_SIDEBAR_MIN_WIDTH } from './constants';
 import {LynxState, RightSidebarTab} from './types';
 
 export function createEmptyLynxState(): LynxState {
@@ -35,6 +36,6 @@ export function createEmptyLynxState(): LynxState {
     filteredTraceSet: new Set(),
     showRightSidebar: false,
     rightSidebarTab: RightSidebarTab.Unknown,
-    rightSidebarWidth: 350,
+    rightSidebarWidth: RIGHT_SIDEBAR_MIN_WIDTH,
   };
 }

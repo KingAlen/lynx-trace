@@ -116,6 +116,8 @@ export const COMMAND_FOCUS_LYNX_VIEW = 'focusLynxView';
 export const COMMAND_QUERY_LYNX_VIEW = 'queryLynxView';
 export const PARAMETER_FOCUS_LYNX_VIEWS = 'focus_lynxviews';
 export const NO_INSTANCE_ID = 'Traces without instanceId';
+export const RIGHT_SIDEBAR_MIN_WIDTH = 450;
+export const RIGHT_SIDEBAR_MAX_WIDTH = 600;
 
 // Trace AI
 export const LOAD_APP_SERVICE = ['App::loadScript', 'loadExternalJS'];

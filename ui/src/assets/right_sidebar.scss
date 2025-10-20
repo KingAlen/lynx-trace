@@ -90,9 +90,9 @@
 
 .rightbar-container {
   grid-area: right-sidebar;
-  width: var(--right-sidebar-width, 350px);
-  min-width: 350px;
-  max-width: 700px;
+  width: var(--right-sidebar-width, 450px);
+  min-width: 450px;
+  max-width: 600px;
   height: 100%;
   position: relative;
 }

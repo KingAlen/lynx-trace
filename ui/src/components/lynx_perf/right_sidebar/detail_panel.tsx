@@ -23,6 +23,7 @@ import {FocusLynxViewDetailPanel} from './focus_lynxview_panel';
 import {lynxPerfGlobals} from '../../../lynx_perf/lynx_perf_globals';
 import {RightSidebarTab} from '../../../lynx_perf/types';
 import {TraceAssistantPanel} from './assistant_panel';
+import { RIGHT_SIDEBAR_MAX_WIDTH, RIGHT_SIDEBAR_MIN_WIDTH } from '../../../lynx_perf/constants';
 
 export class SidebarDetailView implements m.ClassComponent {
   private root: Root | undefined;
@@ -75,7 +76,7 @@ export class DetailViewPanel extends Component {
     this.startWidth = parseInt(
       document.documentElement.style.getPropertyValue(
         '--right-sidebar-width',
-      ) || '350',
+      ) || `${RIGHT_SIDEBAR_MIN_WIDTH}`,
       10,
     );
     document.documentElement.classList.add('dragging');
@@ -85,7 +86,7 @@ export class DetailViewPanel extends Component {
     if (!document.documentElement.classList.contains('dragging')) return;
 
     const dx = e.clientX - this.startX;
-    const newWidth = Math.max(350, Math.min(700, this.startWidth - dx));
+    const newWidth = Math.max(RIGHT_SIDEBAR_MIN_WIDTH, Math.min(RIGHT_SIDEBAR_MAX_WIDTH, this.startWidth - dx));
     document.documentElement.style.setProperty(
       '--right-sidebar-width',
       `${newWidth}px`,
