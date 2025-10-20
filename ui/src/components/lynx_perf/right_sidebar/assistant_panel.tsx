@@ -470,7 +470,6 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
                   >
                     <Option value="doubao">Doubao</Option>
                     <Option value="deepseek">Deepseek</Option>
-                    <Option value="openai">OpenAI</Option>
                     <Option value="gemini">Google Gemini</Option>
                   </Select>
                 </Form.Item>
@@ -479,7 +478,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
                   <Input
                     value={llmConfig.modelName}
                     onChange={(e) => this.updateLLMConfig('modelName', e.target.value)}
-                    placeholder="e.g., seed-1.6, gpt-5, gemini-2.5-pro"
+                    placeholder="e.g., seed-1.6, deepseek, gemini-2.5-pro"
                   />
                 </Form.Item>
                 
