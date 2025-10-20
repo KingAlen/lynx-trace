@@ -77,7 +77,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     const isLynxVersionValid = await this.validateLynxVersion();
     if (!isLynxVersionValid) {
       this.setState({
-        validationError: 'Use Lynx SDK version 3.6.3 or above to enable AI analysis.',
+        validationError: 'Use Lynx SDK version 3.4 or above to enable AI analysis.',
         isValidationPassed: false
       });
       return;
@@ -349,7 +349,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     }
     const result = await engine.query(`select args.display_value from slice join args on args.arg_set_id=slice.arg_set_id where slice.name='LynxEngineVersion' and args.key='debug.version'`);
     const version = result.numRows() > 0 ? result.firstRow({display_value: STR}).display_value : '';
-    return version >= '3.4.3';
+    return version >= '3.4';
   };
 
   validateLLMConfig = (): boolean => {
