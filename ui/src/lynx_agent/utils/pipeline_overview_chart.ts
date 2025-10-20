@@ -1,5 +1,4 @@
 import {getFlattenStyleTraceEvents} from './convert_trace_event_style';
-import {fetchWithTimeout} from '../../base/http_utils';
 
 let crypto: any = null;
 let fs: any = null;
@@ -107,6 +106,31 @@ async function uploadContentToTos(
     return res['message'];
   }
   return '';
+}
+
+function fetchWithTimeout(
+  input: RequestInfo,
+  init: RequestInit,
+  timeoutMs: number,
+) {
+  return new Promise<Response>((resolve, reject) => {
+    let timer = undefined;
+    if (timeoutMs > 0) {
+      timer = setTimeout(
+        () =>
+          reject(new Error(`fetch(${input}) timed out after ${timeoutMs} ms`)),
+        timeoutMs,
+      );
+    }
+    fetch(input, init)
+      .then((response) => resolve(response))
+      .catch((err) => reject(err))
+      .finally(() => {
+        if (timer !== undefined) {
+          clearTimeout(timer);
+        }
+      });
+  });
 }
 
 export function convertToChartTraceEvent(traceEvents: any[]): any[] {

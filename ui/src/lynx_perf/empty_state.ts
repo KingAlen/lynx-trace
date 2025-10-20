@@ -16,7 +16,7 @@
 // Licensed under the Apache License Version 2.0 that can be found in the
 // LICENSE file in the root directory of this source tree.
 
-import { RIGHT_SIDEBAR_MIN_WIDTH } from './constants';
+import {RIGHT_SIDEBAR_MIN_WIDTH} from './constants';
 import {LynxState, RightSidebarTab} from './types';
 
 export function createEmptyLynxState(): LynxState {

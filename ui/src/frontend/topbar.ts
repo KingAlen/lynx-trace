@@ -26,6 +26,7 @@ import {Button} from '../widgets/button';
 import {lynxPerfGlobals} from '../lynx_perf/lynx_perf_globals';
 import {Intent} from '../widgets/common';
 import {RightSidebarTab} from '../lynx_perf/types';
+import {PopupMenu, MenuItem} from '../widgets/menu';
 
 class Progress implements m.ClassComponent<TraceImplAttrs> {
   view({attrs}: m.CVnode<TraceImplAttrs>): m.Children {
@@ -92,51 +93,127 @@ export interface TopbarAttrs {
 }
 
 export class Topbar implements m.ClassComponent<TopbarAttrs> {
-  view({attrs}: m.Vnode<TopbarAttrs>) {
-    const {omnibox} = attrs;
-    return m(
-      '.topbar',
-      {
-        class: `${AppImpl.instance.sidebar.visible ? '' : 'hide-sidebar'} ${lynxPerfGlobals.state.showRightSidebar ? '' : 'hide-right-sidebar'}`,
-      },
-      omnibox,
-      attrs.trace && m(Progress, {trace: attrs.trace}),
-      sourceMapState.state.sourceMapDecodePopup?.render(),
-      lynxPerfGlobals.state.lynxviewInstances.length > 0 &&
+  private resizeHandler = () => {
+    m.redraw();
+  };
+
+  oncreate() {
+    window.addEventListener('resize', this.resizeHandler);
+  }
+
+  onremove() {
+    window.removeEventListener('resize', this.resizeHandler);
+  }
+
+  private getScreenSize(): 'large' | 'medium' | 'small' {
+    const width =
+      window.innerWidth -
+      parseInt(
+        getComputedStyle(document.documentElement).getPropertyValue(
+          '--right-sidebar-width',
+        ),
+      );
+    if (width >= 1400) return 'large';
+    if (width >= 800) return 'medium';
+    return 'small';
+  }
+
+  private renderLynxButtons(screenSize: 'large' | 'medium' | 'small') {
+    if (lynxPerfGlobals.state.lynxviewInstances.length === 0) {
+      return null;
+    }
+
+    const assistantAction = () => {
+      if (
+        lynxPerfGlobals.state.rightSidebarTab === RightSidebarTab.TraceAssistant
+      ) {
+        lynxPerfGlobals.closeRightSidebar();
+      } else {
+        lynxPerfGlobals.changeRightSidebarTab(RightSidebarTab.TraceAssistant);
+      }
+    };
+
+    const lynxViewAction = () => {
+      if (lynxPerfGlobals.state.rightSidebarTab === RightSidebarTab.LynxView) {
+        lynxPerfGlobals.closeRightSidebar();
+      } else {
+        lynxPerfGlobals.changeRightSidebarTab(RightSidebarTab.LynxView);
+      }
+    };
+
+    if (screenSize === 'small') {
+      // Show only overflow menu for small screens
+      return m(
+        PopupMenu,
+        {
+          trigger: m(Button, {
+            className: 'lynx-overflow-menu',
+            icon: 'more_horiz',
+            intent: Intent.Primary,
+          }),
+          popupPosition: PopupPosition.BottomEnd,
+        },
+        m(MenuItem, {
+          label: 'Trace Analysis',
+          icon: 'robot',
+          onclick: assistantAction,
+        }),
+        m(MenuItem, {
+          label: 'Focus LynxView',
+          icon: 'center_focus_strong',
+          onclick: lynxViewAction,
+        }),
+      );
+    } else if (screenSize === 'medium') {
+      // Show icons only for medium screens
+      return [
+        m(Button, {
+          className: 'lynx-assistant',
+          icon: 'robot',
+          intent: Intent.Primary,
+          onclick: assistantAction,
+        }),
+        m(Button, {
+          className: 'lynx-menu',
+          icon: 'center_focus_strong',
+          intent: Intent.Primary,
+          onclick: lynxViewAction,
+        }),
+      ];
+    } else {
+      // Show full buttons with labels for large screens
+      return [
         m(Button, {
           className: 'lynx-assistant',
           label: 'Trace Analysis',
           icon: 'robot',
           intent: Intent.Primary,
-          onclick: (_event: Event) => {
-            if (
-              lynxPerfGlobals.state.rightSidebarTab ===
-              RightSidebarTab.TraceAssistant
-            ) {
-              lynxPerfGlobals.closeRightSidebar();
-            } else {
-              lynxPerfGlobals.changeRightSidebarTab(
-                RightSidebarTab.TraceAssistant,
-              );
-            }
-          },
+          onclick: assistantAction,
         }),
-      lynxPerfGlobals.state.lynxviewInstances.length > 0 &&
         m(Button, {
           className: 'lynx-menu',
           label: 'Focus LynxView',
           icon: 'center_focus_strong',
           intent: Intent.Primary,
-          onclick: (_event: Event) => {
-            if (
-              lynxPerfGlobals.state.rightSidebarTab === RightSidebarTab.LynxView
-            ) {
-              lynxPerfGlobals.closeRightSidebar();
-            } else {
-              lynxPerfGlobals.changeRightSidebarTab(RightSidebarTab.LynxView);
-            }
-          },
+          onclick: lynxViewAction,
         }),
+      ];
+    }
+  }
+
+  view({attrs}: m.Vnode<TopbarAttrs>) {
+    const {omnibox} = attrs;
+    const screenSize = this.getScreenSize();
+
+    return m(
+      '.topbar',
+      {
+        class: `${AppImpl.instance.sidebar.visible ? '' : 'hide-sidebar'} ${lynxPerfGlobals.state.showRightSidebar ? '' : 'hide-right-sidebar'} screen-${screenSize}`,
+      },
+      omnibox,
+      attrs.trace && m(Progress, {trace: attrs.trace}),
+      sourceMapState.state.sourceMapDecodePopup?.render(),
+      this.renderLynxButtons(screenSize),
       attrs.trace && m(TraceErrorIcon, {trace: attrs.trace}),
     );
   }
