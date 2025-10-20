@@ -155,7 +155,7 @@ export class Topbar implements m.ClassComponent<TopbarAttrs> {
         },
         m(MenuItem, {
           label: 'Trace Analysis',
-          icon: 'robot',
+          icon: 'mindfulness',
           onclick: assistantAction,
         }),
         m(MenuItem, {
@@ -169,7 +169,7 @@ export class Topbar implements m.ClassComponent<TopbarAttrs> {
       return [
         m(Button, {
           className: 'lynx-assistant',
-          icon: 'robot',
+          icon: 'mindfulness',
           intent: Intent.Primary,
           onclick: assistantAction,
         }),
@@ -186,7 +186,7 @@ export class Topbar implements m.ClassComponent<TopbarAttrs> {
         m(Button, {
           className: 'lynx-assistant',
           label: 'Trace Analysis',
-          icon: 'robot',
+          icon: 'mindfulness',
           intent: Intent.Primary,
           onclick: assistantAction,
         }),

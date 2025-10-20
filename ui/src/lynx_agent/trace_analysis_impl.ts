@@ -47,6 +47,12 @@ export async function trace_analysis_impl(
         ),
       );
     }
+    verboseLogger.updateStepStatus(
+      'generate-report',
+      'Generate report',
+      'wait',
+      'Create task to generate final report',
+    );
     return await Promise.all(task_results);
   } catch (error) {
     throw error;
@@ -88,12 +94,6 @@ async function lynxview_trace_analysis(
       );
     }
   }
-  verboseLogger.updateStepStatus(
-    'generate-report',
-    'Generate report',
-    'wait',
-    'Create task to generate final report',
-  );
 
   const timing_flags_all = item.timing_flags_all.map(
     (item) => item.timing_flags,
