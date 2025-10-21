@@ -243,20 +243,20 @@ export class LynxAgent {
   protected _tools: Tool[] = [];
   private _verboseLogger: VerboseLogger | undefined = undefined;
   protected _name: string;
-  protected _reportLanguage: string;
+  protected _isChineseLanguage: boolean;
 
   constructor(
     name: string,
     agentConfig: AgentConfig,
     trace_processor: TraceQuery,
-    reportLanguage: string,
+    isChineseLanguage: boolean,
     verboseLogger?: VerboseLogger,
   ) {
     this._llmClient = new LLMClient(agentConfig.model);
     this._modelConfig = agentConfig.model;
     this._maxSteps = agentConfig.max_steps;
     this._name = name;
-    this._reportLanguage = reportLanguage;
+    this._isChineseLanguage = isChineseLanguage;
 
     // Add Trace Query Tools
     this._tools.push(
@@ -327,10 +327,9 @@ export class LynxAgent {
 
     this._initialMessages.push({
       role: 'system',
-      content:
-        this._reportLanguage === 'zh'
-          ? LYNX_AGENT_SYSTEM_PROMPT_CHINESE
-          : LYNX_AGENT_SYSTEM_PROMPT_ENGLISH,
+      content: this._isChineseLanguage
+        ? LYNX_AGENT_SYSTEM_PROMPT_CHINESE
+        : LYNX_AGENT_SYSTEM_PROMPT_ENGLISH,
     });
 
     this._initialMessages.push({

@@ -1,18 +1,21 @@
-
 import {VerboseLogger} from './interface/verbose_logger';
 import {v4 as uuidv4} from 'uuid';
 import {uploadFileToTos} from './pipeline_overview_chart';
 
 let fs: any = null;
-if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+if (
+  typeof process !== 'undefined' &&
+  process.versions &&
+  process.versions.node
+) {
   try {
     fs = require('fs');
   } catch (e) {
     // ignore type error in browser environment
   }
 }
-import { TraceAnalysisRequest, TraceAnalysisResult } from '../types/types';
-import { FeishuConfig } from './interface/feishu_config';
+import {TraceAnalysisRequest, TraceAnalysisResult} from '../types/types';
+import {FeishuConfig} from './interface/feishu_config';
 
 const FEISHU_DOMAIN = 'open.feishu.cn';
 
@@ -66,7 +69,9 @@ export async function generateFeishuDoc(
 }
 
 // 获取访问令牌
-async function getTenantAccessToken(feishuConfig: FeishuConfig): Promise<string | null> {
+async function getTenantAccessToken(
+  feishuConfig: FeishuConfig,
+): Promise<string | null> {
   const url =
     'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal';
   const headers = {'Content-Type': 'application/json; charset=utf-8'};
@@ -451,7 +456,6 @@ async function buildInstancesBlocks(
   return [firstLevelBlockIds, blocks];
 }
 
-// 创建飞书文档
 async function createFeishuDocument(
   feishuConfig: FeishuConfig,
   firstLevelBlockIds: string[],

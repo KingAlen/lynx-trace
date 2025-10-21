@@ -1,3 +1,3 @@
 export interface ReportLanguage {
-  localLanguage(): string;
+  isChineseLanguage(): boolean;
 }

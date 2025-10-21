@@ -28,11 +28,6 @@ export interface LLMConfig {
   customPrompt?: string;
 }
 
-export enum ReportLanguage {
-  ENGLISH = 'en',
-  CHINESE = 'zh',
-}
-
 export interface AnalysisStep {
   id: string;
   title: string;
@@ -65,7 +60,6 @@ export interface ReportExtraAction {
 
 interface State {
   config: LLMConfig;
-  reportLanguage: ReportLanguage;
   reportExtraAction: ReportExtraAction | undefined;
 }
 
@@ -77,7 +71,6 @@ const emptyState: State = {
     baseUrl: '',
     customPrompt: '',
   },
-  reportLanguage: ReportLanguage.ENGLISH,
   reportExtraAction: undefined,
 };
 
@@ -86,12 +79,6 @@ export const llmState = createStore<State>(emptyState);
 export function updateLLMConfig(config: LLMConfig) {
   llmState.edit((draft) => {
     Object.assign(draft.config, config);
-  });
-}
-
-export function updateReportLanguage(language: ReportLanguage) {
-  llmState.edit((draft) => {
-    draft.reportLanguage = language;
   });
 }
 

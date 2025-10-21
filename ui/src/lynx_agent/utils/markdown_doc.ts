@@ -1,9 +1,13 @@
-import { TraceAnalysisResult } from "../types/types";
+import {TraceAnalysisResult} from '../types/types';
+import {PAGE_ANALYSIS_TITLE_EN, PAGE_ANALYSIS_TITLE_ZH} from './constants';
+import {ReportLanguage} from './interface/language';
 
 export function generateMarkdownDoc(
   llm_outputs: TraceAnalysisResult[],
+  reportLanguage: ReportLanguage,
 ): string {
   let blocks = '';
+  const isChineseLanguage = reportLanguage.isChineseLanguage();
 
   // For each LynxView instance
   for (const llm_output of llm_outputs) {
@@ -12,7 +16,7 @@ export function generateMarkdownDoc(
 
     // LynxView title Block, only when there are multiple LynxView instances
     if (llm_outputs.length > 1) {
-      blocks += `## ${bundle_url}页面性能分析 \n\n`;
+      blocks += `## ${bundle_url} ${isChineseLanguage ? PAGE_ANALYSIS_TITLE_ZH : PAGE_ANALYSIS_TITLE_EN} \n\n`;
     }
 
     // handle each timing_flags in LynxView instance

@@ -78,7 +78,7 @@ async function lynxview_trace_analysis(
         agent_config,
         trace_processor,
         verboseLogger,
-        reportLanguage.localLanguage(),
+        reportLanguage,
       );
       verboseLogger.updateStepStatus(
         agent.agentName,

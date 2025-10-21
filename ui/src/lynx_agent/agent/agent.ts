@@ -2,6 +2,7 @@ import {TraceQuery} from '../tools/trace_query';
 import {VerboseLogger} from '../utils/interface/verbose_logger';
 import {AgentConfig} from '../utils/config';
 import {LynxAgent} from './lynx_agent';
+import {ReportLanguage} from '../utils/interface/language';
 
 /**
  * Main Agent class that manages different types of agents.
@@ -16,7 +17,7 @@ export class Agent {
     config: AgentConfig,
     trace_processor: TraceQuery,
     verboseLogger: VerboseLogger,
-    reportLanguage: string,
+    reportLanguage: ReportLanguage,
   ) {
     this.name = name;
     this.agentConfig = config;
@@ -24,7 +25,7 @@ export class Agent {
       name,
       this.agentConfig,
       trace_processor,
-      reportLanguage,
+      reportLanguage.isChineseLanguage(),
       verboseLogger,
     );
   }

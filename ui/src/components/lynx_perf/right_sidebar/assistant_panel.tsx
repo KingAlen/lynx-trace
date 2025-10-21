@@ -44,6 +44,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
   private markdownClick: (e: MouseEvent) => void;
   private isEventListenerAdded = false;
   private verboseLogger: VerboseLoggerImpl;
+  private reportLanguage: ReportLanguage;
   constructor(props: {}) {
     super(props);
     this.state = {
@@ -66,6 +67,9 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     };
     this.markdownClick = this.handleMarkdownClick.bind(this);
     this.verboseLogger = new VerboseLoggerImpl(this);
+    this.reportLanguage = {
+      isChineseLanguage: () => navigator.language.startsWith('zh')
+    }
   }
 
   async componentDidMount() {
@@ -229,10 +233,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       },
       tools: [],
     }
-    const reportLanguage: ReportLanguage = {
-      localLanguage: () => llmState.state.reportLanguage,
-    }
-    return await trace_analysis_impl(window.location.href, new TraceProcessorImpl(), config, this.verboseLogger, new OverviewChartImpl(), reportLanguage);
+    return await trace_analysis_impl(window.location.href, new TraceProcessorImpl(), config, this.verboseLogger, new OverviewChartImpl(), this.reportLanguage);
   }
 
   updateStepStatus = (stepId: string, title: string, status: 'wait' | 'process' | 'finish' | 'error', content: string) => {
@@ -274,7 +275,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
         throw new Error('Analysis failed, llm ouput is empty');
       } else {
         this.verboseLogger.updateStepStatus('generate-report', 'Generate report', 'process', "Begin to generate final report");
-        const finalResult = generateMarkdownDoc(result);
+        const finalResult = generateMarkdownDoc(result, this.reportLanguage);
         const extraActionArea = await llmState.state.reportExtraAction?.render(result, this.verboseLogger.getAllStepContent(), {});
         this.verboseLogger.updateStepStatus('generate-report', 'Generate report', 'finish', "Final report generated");
         
