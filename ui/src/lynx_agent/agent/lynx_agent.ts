@@ -1,4 +1,4 @@
-class AgentExecution {
+export class AgentExecution {
   task: string;
   steps: AgentStep[] = [];
   agentState?: AgentState;
@@ -13,13 +13,13 @@ class AgentExecution {
   }
 }
 
-enum AgentState {
+export enum AgentState {
   RUNNING = 'running',
   COMPLETED = 'completed',
   ERROR = 'error',
 }
 
-class AgentStep {
+export class AgentStep {
   stepNumber: number;
   state: AgentStepState;
   llmResponse?: LLMResponse;
@@ -34,7 +34,7 @@ class AgentStep {
   }
 }
 
-enum AgentStepState {
+export enum AgentStepState {
   THINKING = 'thinking',
   CALLING_TOOL = 'calling_tool',
   REFLECTING = 'reflecting',
@@ -338,7 +338,7 @@ export class LynxAgent {
     });
   }
 
-  async executeTask(pipeline: string): Promise<string> {
+  async executeTask(pipeline: string): Promise<AgentExecution> {
     const startTime = Date.now();
     const execution = new AgentExecution({task: this._task, steps: []});
     this._verboseLogger?.updateStepStatus(
@@ -369,19 +369,20 @@ export class LynxAgent {
           }
           stepNumber++;
         } catch (error) {
-          execution.agentState = AgentState.ERROR;
           step.state = AgentStepState.ERROR;
           step.error = String(error);
+          execution.agentState = AgentState.ERROR;
+          execution.finalResult = `Task execution failed, error: ${step.error}`;
           await this._finalizeStep(step, execution);
+          this._verboseLogger?.updateStepStatus(
+            this._name,
+            'Pipeline analysis',
+            'error',
+            execution.finalResult,
+          );
           break;
         }
       }
-      this._verboseLogger?.updateStepStatus(
-        this._name,
-        'Pipeline analysis',
-        'finish',
-        `pipeline analysis finish, result: ${execution.finalResult}`,
-      );
 
       if (
         stepNumber > this._maxSteps &&
@@ -393,8 +394,15 @@ export class LynxAgent {
         this._verboseLogger?.updateStepStatus(
           this._name,
           'Pipeline analysis',
-          'finish',
+          'error',
           `Task execution exceeded maximum steps without completion.`,
+        );
+      } else if (execution.agentState !== AgentState.ERROR) {
+        this._verboseLogger?.updateStepStatus(
+          this._name,
+          'Pipeline analysis',
+          'finish',
+          `pipeline analysis finish, result: ${execution.finalResult}`,
         );
       }
     } catch (e) {
@@ -402,7 +410,7 @@ export class LynxAgent {
       this._verboseLogger?.updateStepStatus(
         this._name,
         'Pipeline analysis',
-        'finish',
+        'error',
         `Agent execution failed: ${String(e)}`,
       );
     }
@@ -412,7 +420,7 @@ export class LynxAgent {
 
     execution.executionTime = Date.now() - startTime;
 
-    return execution.finalResult || '';
+    return execution;
   }
 
   private async _closeTools(): Promise<any> {

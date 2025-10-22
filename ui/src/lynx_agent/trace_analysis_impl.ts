@@ -7,6 +7,7 @@ import {OverviewChart} from './utils/interface/overview_chart';
 import {ReportLanguage} from './utils/interface/language';
 import {TraceAnalysisResult} from './types/types';
 import {v4 as uuidv4} from 'uuid';
+import {AgentExecution} from './agent/lynx_agent';
 
 export async function trace_analysis_impl(
   trace_url: string,
@@ -23,14 +24,14 @@ export async function trace_analysis_impl(
       step_one_id,
       'Extract overview trace events',
       'process',
-      'begin to get the overview trace events',
+      '',
     );
     const overviewTrace = await overviewTraceImpl(trace_processor);
     verboseLogger.updateStepStatus(
       step_one_id,
       'Extract overview trace events',
       'finish',
-      'overview trace events: ' + JSON.stringify(overviewTrace),
+      '',
     );
 
     const task_results: Promise<TraceAnalysisResult>[] = [];
@@ -51,7 +52,7 @@ export async function trace_analysis_impl(
       'generate-report',
       'Generate report',
       'wait',
-      'Create task to generate final report',
+      '',
     );
     return await Promise.all(task_results);
   } catch (error) {
@@ -70,7 +71,7 @@ async function lynxview_trace_analysis(
   overviewChart: OverviewChart,
   reportLanguage: ReportLanguage,
 ): Promise<TraceAnalysisResult> {
-  const stage_one_results: Promise<string>[] = [];
+  const agent_excutions: Promise<AgentExecution>[] = [];
   if (item.timing_flags_crop.length > 0) {
     for (const pipline of item.timing_flags_crop) {
       const agent = new Agent(
@@ -86,7 +87,7 @@ async function lynxview_trace_analysis(
         'wait',
         'create task to analysis pipeline: ' + pipline.timing_flags,
       );
-      stage_one_results.push(
+      agent_excutions.push(
         agent.analysisPipleline(
           'Overview trace events: ' + JSON.stringify(pipline),
           pipline.timing_flags,
@@ -98,11 +99,11 @@ async function lynxview_trace_analysis(
   const timing_flags_all = item.timing_flags_all.map(
     (item) => item.timing_flags,
   );
-  const results = await Promise.all(stage_one_results);
+  const agent_excutions_results = await Promise.all(agent_excutions);
   const pattern = /\[(.*?)\]\((\d+)\)/g;
   const replacement = `[$1](${trace_url}&sliceId=$2)`;
-  const stage_one_results_str = results.map((text) =>
-    text.replace(pattern, replacement),
+  const stage_one_results_str = agent_excutions_results.map(
+    (execution) => execution.finalResult?.replace(pattern, replacement) || '',
   );
   const bundle_url = item.bundle_url;
   return {

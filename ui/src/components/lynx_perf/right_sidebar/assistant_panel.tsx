@@ -14,7 +14,6 @@ import { AgentConfig } from '../../../lynx_agent/utils/config';
 import { trace_analysis_impl } from '../../../lynx_agent/trace_analysis_impl';
 import { AnalysisReport, AnalysisStep, llmState } from '../../../lynx_perf/llm_state';
 import { ReportLanguage } from '../../../lynx_agent/utils/interface/language';
-import { Router } from '../../../core/router';
 import {TraceProcessorImpl, VerboseLoggerImpl, OverviewChartImpl } from './ai_analysis/analysis_impl';
 import { STR } from '../../../trace_processor/query_result';
 
@@ -31,9 +30,6 @@ export interface TraceAssistantPanelState {
 
 
 export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState> {
-  private markdownRef: HTMLDivElement | null = null;
-  private markdownClick: (e: MouseEvent) => void;
-  private isEventListenerAdded = false;
   private verboseLogger: VerboseLoggerImpl;
   private reportLanguage: ReportLanguage;
   constructor(props: {}) {
@@ -47,7 +43,6 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       validationError: '',
       isValidationPassed: false
     };
-    this.markdownClick = this.handleMarkdownClick.bind(this);
     this.verboseLogger = new VerboseLoggerImpl(this);
     this.reportLanguage = {
       isChineseLanguage: () => navigator.language.startsWith('zh')
@@ -112,74 +107,6 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     };
     await llmState.state.reportExtraAction?.saveHistoryAnalysisReport(report);
   };
-
-  private isCurrentPageLink(href: string) {
-    try {
-      const currentUrl = new URL(window.location.href);
-      const targetUrl = new URL(href);
-      return currentUrl.host == targetUrl.host && currentUrl.pathname == targetUrl.pathname;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  private getSliceIdFromUrl(href: string) {
-    try {
-      const router = Router.parseUrl(href);
-      return router.args.sliceId ?? null;
-    } catch (error) {
-      return null;
-    }
-  };
-
-  private handleMarkdownClick(e: MouseEvent) {
-    if (e.target && e.target instanceof HTMLElement && e.target.tagName === 'A') {
-      const href = e.target.getAttribute('href');
-
-      if (href && this.isCurrentPageLink(href)) {
-        const sliceId = this.getSliceIdFromUrl(href);
-        if (sliceId) {
-          e.preventDefault();
-          AppImpl.instance.trace?.selection.selectSqlEvent('slice', parseInt(sliceId), {
-            scrollToSelection: true,
-          });
-        }
-      }
-    }
-  };
-
-  componentDidUpdate(_prevProps: {}, prevState: TraceAssistantPanelState) {
-    if (
-      this.state.status === 'completed' &&
-      this.markdownRef &&
-      !this.isEventListenerAdded // 确保只添加一次
-    ) {
-      this.markdownRef.addEventListener('click', this.markdownClick);
-      this.isEventListenerAdded = true;
-      console.log('Markdown click event listener added'); // 调试用
-    }
-
-    // 当状态从 completed 变为其他状态时，移除事件监听器
-    if (
-      prevState.status === 'completed' &&
-      this.state.status !== 'completed' &&
-      this.isEventListenerAdded
-    ) {
-      this.removeMarkdownClickListener();
-    }
-  }
-
-  private removeMarkdownClickListener() {
-    if (this.markdownRef && this.isEventListenerAdded) {
-      this.markdownRef.removeEventListener('click', this.markdownClick);
-      this.isEventListenerAdded = false;
-      console.log('Markdown click event listener removed'); // 调试用
-    }
-  }
-
-  componentWillUnmount() {
-    this.removeMarkdownClickListener();
-  }
 
   private getLLMConfig = () => {
     const modelProvider = AIAnalysis.modelProviderSetting.get();
@@ -255,10 +182,10 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       if (result.length <= 0) {
         throw new Error('Analysis failed, llm ouput is empty');
       } else {
-        this.verboseLogger.updateStepStatus('generate-report', 'Generate report', 'process', "Begin to generate final report");
+        this.verboseLogger.updateStepStatus('generate-report', 'Generate report', 'process', "");
         const finalResult = generateMarkdownDoc(result, this.reportLanguage);
         const extraActionArea = await llmState.state.reportExtraAction?.render(result, this.verboseLogger.getAllStepContent(), {});
-        this.verboseLogger.updateStepStatus('generate-report', 'Generate report', 'finish', "Final report generated");
+        this.verboseLogger.updateStepStatus('generate-report', 'Generate report', 'finish', "");
         
         this.setState({
           status: 'completed',
@@ -404,7 +331,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
               <AnalysisReportComponent 
                 analysisResult={this.state.analysisResult}
                 extraActionArea={this.state.extraActionArea}
-                markdownRef={(ref) => { this.markdownRef = ref; }}
+                status={this.state.status}
               />
             </div>
             

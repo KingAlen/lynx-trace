@@ -35,6 +35,7 @@ class LynxPerfGlobals {
     this._store.edit((draft) => {
       Object.assign(draft, createEmptyLynxState());
     });
+    this.closeRightSidebar();
   }
 
   appendPerformanceIssue(issues: IssueSummary[]) {

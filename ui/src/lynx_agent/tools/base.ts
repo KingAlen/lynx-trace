@@ -270,7 +270,7 @@ export class ToolExecutor {
       this._verboseLogger?.updateStepStatus(
         this._agent_name,
         'Pipeline analysis',
-        'error',
+        'process',
         `Tool '${tool_call.name}' not found. Available tools: ${this._tools.map((tool) => tool.name)}`,
       );
       return {
@@ -315,7 +315,7 @@ export class ToolExecutor {
         this._verboseLogger?.updateStepStatus(
           this._agent_name,
           'Pipeline analysis',
-          'error',
+          'process',
           `Tool '${tool_call.name}' error: ${tool_exec_result.error}`,
         );
       }

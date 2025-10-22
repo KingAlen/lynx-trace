@@ -1,7 +1,7 @@
 import {TraceQuery} from '../tools/trace_query';
 import {VerboseLogger} from '../utils/interface/verbose_logger';
 import {AgentConfig} from '../utils/config';
-import {LynxAgent} from './lynx_agent';
+import {AgentExecution, LynxAgent} from './lynx_agent';
 import {ReportLanguage} from '../utils/interface/language';
 
 /**
@@ -37,7 +37,10 @@ export class Agent {
   /**
    * Run the agent with a given task.
    */
-  async analysisPipleline(task: string, pipeline: string): Promise<string> {
+  async analysisPipleline(
+    task: string,
+    pipeline: string,
+  ): Promise<AgentExecution> {
     this.agent.newTask(task);
     return await this.agent.executeTask(pipeline);
   }

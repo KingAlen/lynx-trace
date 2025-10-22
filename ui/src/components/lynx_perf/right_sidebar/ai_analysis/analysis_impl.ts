@@ -91,7 +91,9 @@ export class VerboseLoggerImpl implements VerboseLogger {
       this.panelInstance.updateStepStatus(stepId, title, status, content);
     }
     this.stepContent[stepId] = this.stepContent[stepId] || [];
-    this.stepContent[stepId].push(content);
+    if (content) {
+      this.stepContent[stepId].push(content);
+    }
   }
 }
 
