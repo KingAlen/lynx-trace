@@ -27,6 +27,7 @@ import {lynxPerfGlobals} from '../lynx_perf/lynx_perf_globals';
 import {Intent} from '../widgets/common';
 import {RightSidebarTab} from '../lynx_perf/types';
 import {PopupMenu, MenuItem} from '../widgets/menu';
+import {eventLoggerState} from '../event_logger';
 
 class Progress implements m.ClassComponent<TraceImplAttrs> {
   view({attrs}: m.CVnode<TraceImplAttrs>): m.Children {
@@ -130,6 +131,10 @@ export class Topbar implements m.ClassComponent<TopbarAttrs> {
         lynxPerfGlobals.closeRightSidebar();
       } else {
         lynxPerfGlobals.changeRightSidebarTab(RightSidebarTab.TraceAssistant);
+        eventLoggerState.state.eventLogger.logEvent(
+          'ai_analysis_entry_click',
+          {},
+        );
       }
     };
 

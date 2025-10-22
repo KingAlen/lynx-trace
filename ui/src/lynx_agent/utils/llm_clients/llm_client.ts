@@ -6,9 +6,9 @@ import {LLMMessage, LLMResponse} from './llm_basics';
 enum LLMProvider {
   // Supported LLM providers.
   OPENAI = 'openai',
-  //   ANTHROPIC = 'anthropic',
+  ANTHROPIC = 'anthropic',
   DOUBAO = 'doubao',
-  GOOGLE = 'google',
+  GEMINI = 'gemini',
   DEEPSEEK = 'deepseek',
 }
 
@@ -17,12 +17,10 @@ enum LLMProvider {
  */
 export class LLMClient {
   public provider: LLMProvider;
-  //   private modelConfig: ModelConfig;
   private client: BaseLLMClient;
 
   constructor(modelConfig: ModelConfig) {
     this.provider = modelConfig.model_provider.provider as LLMProvider;
-    // this.modelConfig = modelConfig;
 
     switch (this.provider) {
       case LLMProvider.OPENAI:
@@ -31,17 +29,12 @@ export class LLMClient {
         this.client = new OpenAIClient(modelConfig);
         break;
 
-      //   case LLMProvider.ANTHROPIC:
-      //     const { AnthropicClient } = require('./anthropic_client');
-      //     this.client = new AnthropicClient(modelConfig);
-      //     break;
+      case LLMProvider.ANTHROPIC:
+        const {AnthropicClient} = require('./anthropic_client');
+        this.client = new AnthropicClient(modelConfig);
+        break;
 
-      // case LLMProvider.DOUBAO:
-      //   const {DoubaoClient} = require('./doubao_client');
-      //   this.client = new DoubaoClient(modelConfig);
-      //   break;
-
-      case LLMProvider.GOOGLE:
+      case LLMProvider.GEMINI:
         const {GoogleClient} = require('./google_client');
         this.client = new GoogleClient(modelConfig);
         break;

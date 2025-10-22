@@ -16,7 +16,7 @@ export class AnthropicClient extends BaseLLMClient {
 
     this.client = new Anthropic({
       apiKey: this.api_key,
-      baseURL: this.base_url || undefined,
+      baseURL: this.base_url,
     });
   }
 

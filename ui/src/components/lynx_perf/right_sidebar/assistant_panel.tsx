@@ -16,6 +16,7 @@ import { AnalysisReport, AnalysisStep, llmState } from '../../../lynx_perf/llm_s
 import { ReportLanguage } from '../../../lynx_agent/utils/interface/language';
 import {TraceProcessorImpl, VerboseLoggerImpl, OverviewChartImpl } from './ai_analysis/analysis_impl';
 import { STR } from '../../../trace_processor/query_result';
+import { eventLoggerState } from '../../../event_logger';
 
 
 export interface TraceAssistantPanelState {
@@ -61,6 +62,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
         validationError: 'Use Lynx SDK version 3.4 or above to enable AI analysis.',
         isValidationPassed: false
       });
+      eventLoggerState.state.eventLogger.logEvent('ai_analysis_low_lynx_version', {});
       return;
     }
 
@@ -173,7 +175,10 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     });
   };
 
-  private triggerTraceAIAnalysis = async () => {
+  private triggerTraceAIAnalysis = async (from: string) => {
+    eventLoggerState.state.eventLogger.logEvent('ai_analysis_click', {
+      from: from
+    });
     this.setState({
       status: 'analyzing',
     });
@@ -183,7 +188,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
         throw new Error('Analysis failed, llm ouput is empty');
       } else {
         this.verboseLogger.updateStepStatus('generate-report', 'Generate report', 'process', "");
-        const finalResult = generateMarkdownDoc(result, this.reportLanguage);
+        const finalResult = generateMarkdownDoc(result, this.reportLanguage, this.getLLMConfig().modelName);
         const extraActionArea = await llmState.state.reportExtraAction?.render(result, this.verboseLogger.getAllStepContent(), {});
         this.verboseLogger.updateStepStatus('generate-report', 'Generate report', 'finish', "");
         
@@ -199,6 +204,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
             analysisSteps: this.state.analysisSteps,
           });
         });
+        eventLoggerState.state.eventLogger.logEvent('ai_analysis_show_report', {});
       }
     } catch (error) {
       console.error('AI analysis request failed:', error);
@@ -226,12 +232,12 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
   };
 
   startAnalysis = async () => {
-    this.triggerTraceAIAnalysis();
+    this.triggerTraceAIAnalysis("home");
   };
 
   restartAnalysis = () => {
     this.resetToInitial();
-    this.triggerTraceAIAnalysis();
+    this.triggerTraceAIAnalysis("restart");
   };
 
   resetToInitial = () => {

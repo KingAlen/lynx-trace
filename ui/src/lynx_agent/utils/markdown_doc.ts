@@ -5,6 +5,7 @@ import {ReportLanguage} from './interface/language';
 export function generateMarkdownDoc(
   llm_outputs: TraceAnalysisResult[],
   reportLanguage: ReportLanguage,
+  modelName: string,
 ): string {
   let blocks = '';
   const isChineseLanguage = reportLanguage.isChineseLanguage();
@@ -24,6 +25,10 @@ export function generateMarkdownDoc(
       const stage_one_result = stage_one_results[idx];
       blocks += stage_one_result + '\n\n';
     }
+
+    // Add LLM model name
+    blocks += '---\n\n';
+    blocks += `Analysis completed at ${new Date().toLocaleString()} Model: ${modelName}`;
   }
 
   return blocks;
