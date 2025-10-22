@@ -103,16 +103,20 @@ export class DetailViewPanel extends Component {
       <div
         className="rightbar-container"
         ref={this.containerRef}
-        style={{height: '100%'}}>
+        style={{height: '100%', display: 'flex'}}>
         <div
           className="rightbar-container-resizer"
           ref={this.resizerRef}
-          onMouseDown={this.handleMouseDown}></div>
-        {lynxPerfGlobals.state.rightSidebarTab === RightSidebarTab.LynxView && (
+          onMouseDown={this.handleMouseDown}
+          style={{width: '2px', flexShrink: 0}}>
+        </div>
+        <div style={{flex: 1}}>
+          {lynxPerfGlobals.state.rightSidebarTab === RightSidebarTab.LynxView && (
           <FocusLynxViewDetailPanel />
-        )}
-        {lynxPerfGlobals.state.rightSidebarTab ===
+          )}
+          {lynxPerfGlobals.state.rightSidebarTab ===
           RightSidebarTab.TraceAssistant && <TraceAssistantPanel />}
+        </div>
       </div>
     );
   }

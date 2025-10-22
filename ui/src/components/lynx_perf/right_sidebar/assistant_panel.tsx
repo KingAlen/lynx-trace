@@ -3,11 +3,10 @@
 // LICENSE file in the root directory of this source tree.
 
 import { Component } from 'react';
-import { Button, Modal, Form, Input, Select, message } from 'antd';
-import { SettingOutlined } from '@ant-design/icons';
-const { Option } = Select;
+import { Button } from 'antd';
 import {AnalysisProcess} from './ai_analysis/analysis_process';
 import {AnalysisReportComponent} from './ai_analysis/analysis_report';
+import {SettingsButton} from './ai_analysis/settings_button';
 import { AppImpl } from '../../../core/app_impl';
 import { generateMarkdownDoc } from '../../../lynx_agent/utils/markdown_doc';
 import AIAnalysis from '../../../plugins/lynx.AIAnalysis';
@@ -25,15 +24,7 @@ export interface TraceAssistantPanelState {
   analysisResult: string;
   extraActionArea?: React.ReactNode;
   extraActionProperties: Record<string, string>;
-  showSettingsModal: boolean;
   analysisSteps: AnalysisStep[];
-  llmConfig: {
-    baseUrl: string;
-    apiKey: string;
-    modelName: string;
-    modelProvider: string;
-    customPrompt: string;
-  };
   validationError: string;
   isValidationPassed: boolean;
 }
@@ -52,16 +43,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
       analysisResult: '',
       extraActionArea: undefined,
       extraActionProperties: {},
-      showSettingsModal: false,
-      analysisSteps: [
-      ],
-      llmConfig: {
-        baseUrl: '',
-        apiKey: '',
-        modelName: '',
-        modelProvider: '',
-        customPrompt: ''
-      },
+      analysisSteps: [],
       validationError: '',
       isValidationPassed: false
     };
@@ -93,7 +75,6 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
         validationError: 'Add LLM configuration in Settings to enable AI analysis.',
         isValidationPassed: false
       });
-      this.showSettings();
       return;
     }
 
@@ -107,7 +88,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     const prevAnalysisResult = await llmState.state.reportExtraAction?.getHistoryAnalysisReport();
 
     if (prevAnalysisResult && this.state.status == 'initial') {
-          console.log('prevAnalysisResult', JSON.stringify(prevAnalysisResult));
+      console.log('prevAnalysisResult', JSON.stringify(prevAnalysisResult));
       const extraActionArea = await llmState.state.reportExtraAction?.render(undefined, undefined, prevAnalysisResult.extraActionProperties);
       this.setState({
         ...this.state,
@@ -302,47 +283,6 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
     }
   };
 
-
-  showSettings = () => {
-    this.setState({
-      showSettingsModal: true,
-      llmConfig: {
-        baseUrl: AIAnalysis.baseUrlSetting.get() || '',
-        apiKey: AIAnalysis.APIKeySetting.get() || '',
-        modelName: AIAnalysis.modelNameSetting.get() || '',
-        modelProvider: AIAnalysis.modelProviderSetting.get() || '',
-        customPrompt: AIAnalysis.customPromptSetting.get() || ''
-      }
-    });
-  };
-
-  hideSettings = () => {
-    this.setState({ showSettingsModal: false });
-  };
-
-  saveSettings = async () => {
-    const { llmConfig } = this.state;
-    AIAnalysis.baseUrlSetting.set(llmConfig.baseUrl);
-    AIAnalysis.APIKeySetting.set(llmConfig.apiKey);
-    AIAnalysis.modelNameSetting.set(llmConfig.modelName);
-    AIAnalysis.modelProviderSetting.set(llmConfig.modelProvider);
-    AIAnalysis.customPromptSetting.set(llmConfig.customPrompt);
-    
-    message.success('Save Settings Successfully');
-    this.hideSettings();
-    
-    await this.performValidation();
-  };
-
-  updateLLMConfig = (field: string, value: string) => {
-    this.setState({
-      llmConfig: {
-        ...this.state.llmConfig,
-        [field]: value
-      }
-    });
-  };
-
   validateLynxVersion = async (): Promise<boolean> => {
      const engine = AppImpl.instance.trace?.engine;
     if (!engine) {
@@ -378,7 +318,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
   };
 
   renderContent = () => {
-    const { status, showSettingsModal, llmConfig } = this.state;
+    const { status } = this.state;
 
     switch (status) {
       case 'initial':
@@ -439,89 +379,23 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
               )}
             </div>
             
-            <div style={{ position: 'absolute', top: '16px', right: '16px' }}>
-              <Button
-                type="text"
-                icon={<SettingOutlined />}
-                onClick={this.showSettings}
-                style={{ 
-                  fontSize: '14px',
-                  color: '#8c8c8c'
-                }}
-              >
-                Settings
-              </Button>
-            </div>
-            
-            <Modal
-              title="LLM Configuration"
-              open={showSettingsModal}
-              onOk={this.saveSettings}
-              onCancel={this.hideSettings}
-              width={600}
-              okText="Save"
-              cancelText="Cancel"
-            >
-              <Form layout="vertical" style={{ marginTop: '16px' }}>
-                <Form.Item label="Model Provider">
-                  <Select
-                    value={llmConfig.modelProvider || undefined}
-                    onChange={(value) => this.updateLLMConfig('modelProvider', value)}
-                    placeholder="Select model provider"
-                  >
-                    <Option value="doubao">Doubao</Option>
-                    <Option value="deepseek">Deepseek</Option>
-                    <Option value="gemini">Google Gemini</Option>
-                  </Select>
-                </Form.Item>
-                
-                <Form.Item label="Model Name">
-                  <Input
-                    value={llmConfig.modelName}
-                    onChange={(e) => this.updateLLMConfig('modelName', e.target.value)}
-                    placeholder="e.g., seed-1.6, deepseek, gemini-2.5-pro"
-                  />
-                </Form.Item>
-                
-                <Form.Item label="API Key">
-                  <Input.Password
-                    value={llmConfig.apiKey}
-                    onChange={(e) => this.updateLLMConfig('apiKey', e.target.value)}
-                    placeholder="Enter your API key"
-                  />
-                </Form.Item>
-                
-                <Form.Item label="Base URL (Optional)">
-                  <Input
-                    value={llmConfig.baseUrl}
-                    onChange={(e) => this.updateLLMConfig('baseUrl', e.target.value)}
-                    placeholder="e.g., https://ark.cn-beijing.volces.com/api/v3"
-                  />
-                </Form.Item>
-                
-                <Form.Item label="Custom Prompt (Optional)">
-                  <Input.TextArea
-                    value={llmConfig.customPrompt}
-                    onChange={(e) => this.updateLLMConfig('customPrompt', e.target.value)}
-                    placeholder="Enter your custom analysis prompt to provide the AI with additional context about the current Trace, such as custom trace events and descriptions."
-                    rows={5}
-                  />
-                </Form.Item>
-              </Form>
-            </Modal>
+            <SettingsButton onValidationComplete={this.performValidation} />
           </div>
         );
 
       case 'analyzing':
         return (
-           <div style={{ height: '100%', overflowY: 'auto', padding: '16px' }}>
-               <AnalysisProcess steps={this.state.analysisSteps} />
+           <div style={{ height: '100%', overflowY: 'auto', padding: '16px', position: 'relative' }}>
+               <div style={{ marginTop: '24px' }}>
+                  <AnalysisProcess steps={this.state.analysisSteps} />
+               </div>
+               <SettingsButton onValidationComplete={this.performValidation} />
            </div>
         )
       case 'completed':
         return (
-          <div style={{ height: '100%', overflowY: 'auto', padding: '16px' }}>
-            <div style={{ marginBottom: '24px' }}>
+          <div style={{ height: '100%', overflowY: 'auto', padding: '16px', position: 'relative' }}>
+            <div style={{ marginBottom: '24px', marginTop: '24px' }}>
               <AnalysisProcess steps={this.state.analysisSteps} />
             </div>
             
@@ -566,6 +440,7 @@ export class TraceAssistantPanel extends Component<{}, TraceAssistantPanelState>
                 Reset
               </Button>
             </div>
+            <SettingsButton onValidationComplete={this.performValidation} />
           </div>
         );
 
