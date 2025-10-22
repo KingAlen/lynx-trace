@@ -85,7 +85,7 @@ async function lynxview_trace_analysis(
         agent.agentName,
         'Analyze pipeline: ' + pipline.timing_flags,
         'wait',
-        'create task to analysis pipeline: ' + pipline.timing_flags,
+        '',
       );
       agent_excutions.push(
         agent.analysisPipleline(

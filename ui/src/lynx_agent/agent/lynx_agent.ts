@@ -345,7 +345,7 @@ export class LynxAgent {
       this._name,
       'Analyze pipeline: ' + pipeline,
       'process',
-      'begin to analysis pipeline: ' + pipeline,
+      '',
     );
     let step: AgentStep | null = null;
 

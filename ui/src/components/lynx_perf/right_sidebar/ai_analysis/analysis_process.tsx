@@ -67,7 +67,7 @@ export class AnalysisProcess extends React.Component<AnalysisProcessProps, Analy
           flexDirection: 'column',
           gap: '12px'
         }}>
-          {steps.map((step: AnalysisStep, index: number) => (
+          {steps.map((step: AnalysisStep) => (
             <div key={step.id} style={{
               backgroundColor: '#ffffff',
               border: '1px solid #e5e7eb',
@@ -92,14 +92,6 @@ export class AnalysisProcess extends React.Component<AnalysisProcessProps, Analy
                   alignItems: 'center',
                   gap: '12px'
                 }}>
-                  <span style={{
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    color: '#6b7280',
-                    flexShrink: 0
-                  }}>
-                    {index + 1}
-                  </span>
                   <div style={{
                     flexShrink: 0
                   }}>
@@ -107,8 +99,7 @@ export class AnalysisProcess extends React.Component<AnalysisProcessProps, Analy
                   </div>
                   <span style={{
                     fontWeight: 500,
-                    color: step.status === 'finish' ? '#22c55e' : 
-                           step.status === 'process' ? '#3b82f6' : '#6b7280',
+                    color: '#121212',
                     wordBreak: 'break-word',
                     flex: 1
                   }}>
@@ -117,8 +108,8 @@ export class AnalysisProcess extends React.Component<AnalysisProcessProps, Analy
                 </div>
                 {step.details.length > 0 && (
                   expandedSteps.has(step.id) ? 
-                    <ChevronDown size={16} style={{ color: '#6b7280' }} /> : 
-                    <ChevronRight size={16} style={{ color: '#6b7280' }} />
+                    <ChevronDown size={16} style={{ color: '#121212' }} /> : 
+                    <ChevronRight size={16} style={{ color: '#121212' }} />
                 )}
               </div>
 
