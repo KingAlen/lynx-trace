@@ -95,16 +95,22 @@ export class AnalysisProcess extends React.Component<AnalysisProcessProps, Analy
                   <span style={{
                     fontSize: '0.875rem',
                     fontWeight: 500,
-                    color: '#6b7280'
+                    color: '#6b7280',
+                    flexShrink: 0
                   }}>
                     {index + 1}
                   </span>
-                  {this.getStatusIcon(step.status)}
+                  <div style={{
+                    flexShrink: 0
+                  }}>
+                    {this.getStatusIcon(step.status)}
+                  </div>
                   <span style={{
                     fontWeight: 500,
                     color: step.status === 'finish' ? '#22c55e' : 
                            step.status === 'process' ? '#3b82f6' : '#6b7280',
-                    wordBreak: 'break-word'
+                    wordBreak: 'break-word',
+                    flex: 1
                   }}>
                     {step.title}
                   </span>
