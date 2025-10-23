@@ -250,7 +250,6 @@ All queries return detailed event information including id, name, timestamp, dur
         );
         const result = {
           'Trace events': simplified_trace_event,
-          // "Trace 事件对应的描述": trace_event_desc,
         };
         return {
           output: JSON.stringify({'trace_query results': result}),
@@ -285,7 +284,7 @@ All queries return detailed event information including id, name, timestamp, dur
           return {
             error: JSON.stringify({
               status: 'error',
-              message: `trace_query tool ${mode} 模式未提供 name 参数`,
+              message: `trace_query tool ${mode} mode parameter name is required`,
             }),
             error_code: -1,
           };
@@ -337,7 +336,7 @@ All queries return detailed event information including id, name, timestamp, dur
           return {
             error: JSON.stringify({
               status: 'error',
-              message: `trace_query tool ${mode} 模式未提供 slice_id 参数`,
+              message: `trace_query tool ${mode} mode parameter slice_id is required`,
             }),
             error_code: -1,
           };
@@ -438,7 +437,6 @@ All queries return detailed event information including id, name, timestamp, dur
           output: JSON.stringify({
             'trace_query results': {
               'Trace events': trace_event,
-              // 'Trace 事件对应的描述': trace_event_desc,
             },
           }),
         };
@@ -521,8 +519,7 @@ All queries return detailed event information including id, name, timestamp, dur
       return simplified_trace_event;
     }
     return {
-      'Trace 事件列表': simplified_trace_event,
-      // "Trace 事件对应的描述": trace_event_desc
+      'Trace events': simplified_trace_event,
     };
   }
 
@@ -593,7 +590,7 @@ All queries return detailed event information including id, name, timestamp, dur
         console.debug(
           'simlify trace tool can not remove any more trace events',
         );
-        return '当前查询范围过大，简化 trace 工具无法继续移除 trace 事件，请缩小查询范围';
+        return 'current query range is too large, simplify trace tool can not remove any more trace events, please narrow the query range';
       }
       prev_trace_event_len = trace_event.length;
       call_stack_duration_threshold *= 2;

@@ -108,8 +108,8 @@ export class AnalysisProcess extends React.Component<AnalysisProcessProps, Analy
                 </div>
                 {step.details.length > 0 && (
                   expandedSteps.has(step.id) ? 
-                    <ChevronDown size={16} style={{ color: '#121212' }} /> : 
-                    <ChevronRight size={16} style={{ color: '#121212' }} />
+                    <ChevronDown size={16} style={{ color: '#121212', flexShrink: 0 }} /> : 
+                    <ChevronRight size={16} style={{ color: '#121212', flexShrink: 0 }} />
                 )}
               </div>
 
