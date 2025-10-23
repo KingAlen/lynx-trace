@@ -1,6 +1,6 @@
 {
     "name": "@byted-lynx/lynx-agent",
-    "version": "0.0.4-alpha.11",
+    "version": "0.0.4-alpha.12",
     "description": "An npm package for trace analysis",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",

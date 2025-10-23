@@ -119,7 +119,6 @@ export class SettingsButton extends Component<SettingsButtonProps, SettingsButto
                 <Option value="doubao">Doubao</Option>
                 <Option value="deepseek">Deepseek</Option>
                 <Option value="gemini">Google Gemini</Option>
-                <Option value="anthropic">Anthropic Claude</Option>
               </Select>
             </Form.Item>
             
