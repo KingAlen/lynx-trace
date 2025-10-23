@@ -27,7 +27,7 @@ export class AnalysisReportComponent extends Component<AnalysisReportProps> {
     if (e.target && e.target instanceof HTMLElement && e.target.tagName === 'A') {
       const href = e.target.getAttribute('href');
 
-      if (href && this.isCurrentPageLink(href)) {
+      if (href) {
         const sliceId = this.getSliceIdFromUrl(href);
         if (sliceId) {
           e.preventDefault();
@@ -38,16 +38,6 @@ export class AnalysisReportComponent extends Component<AnalysisReportProps> {
       }
     }
   };
-
-  private isCurrentPageLink = (href: string) => {
-    try {
-      const currentUrl = new URL(window.location.href);
-      const targetUrl = new URL(href);
-      return currentUrl.host == targetUrl.host && currentUrl.pathname == targetUrl.pathname;
-    } catch (error) {
-      return false;
-    }
-  }
 
   private getSliceIdFromUrl = (href: string) => {
     try {
