@@ -6,7 +6,6 @@ import {overviewTraceImpl, OverviewTraceResult} from './utils/overview_trace';
 import {OverviewChart} from './utils/interface/overview_chart';
 import {ReportLanguage} from './utils/interface/language';
 import {TraceAnalysisResult} from './types/types';
-import {v4 as uuidv4} from 'uuid';
 import {AgentExecution} from './agent/lynx_agent';
 
 export async function trace_analysis_impl(
@@ -75,7 +74,7 @@ async function lynxview_trace_analysis(
   if (item.timing_flags_crop.length > 0) {
     for (const pipline of item.timing_flags_crop) {
       const agent = new Agent(
-        'pipeline_analyze_agent-' + uuidv4(),
+        'pipeline_analyze_agent-' + pipline.timing_flags,
         agent_config,
         trace_processor,
         verboseLogger,
