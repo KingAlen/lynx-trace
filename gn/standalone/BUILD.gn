@@ -483,6 +483,10 @@ config("executable") {
     ldflags += [ "-pie" ]
   }
 
+  if (is_linux) {
+    ldflags += [ "-static" ]
+  }
+
   # -rpath stores the path to the linked shared libraries into the binary, so
   # that they can be launched without passing any LD_LIBRARY_PATH. It's
   # supported only by Linux, not Android. But concretely we need this only when
