@@ -56,6 +56,7 @@ export const CRUCIAL_TIMING_KEYS = [
 export const TIMING_LOAD_BUNDLE_START = [
   'Timing::Mark.setup_load_template_start',
   'Timing::Mark.loadBundleStart',
+  'Timing::Mark.load_template_start'
 ];
 export const TIMING_MARK_PREFIX = 'Timing::Mark.';
 export const TIMING_MARK_FRAMEWORK_PREFIX = 'Timing::MarkFrameWorkTiming.';

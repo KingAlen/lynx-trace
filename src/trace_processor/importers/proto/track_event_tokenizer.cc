@@ -619,6 +619,32 @@ base::Status TrackEventTokenizer::HandleExtraArgsValues(
       event_name = decoder->name().ToStdString();
     }
   }
+
+
+  // if (next_children_count_ > 0 && print_mode_) {
+  //   next_children_count_ --;
+  //   PERFETTO_ELOG("current event name is: %s", event_name.c_str());
+  // } else if (print_mode_) {
+  //   print_mode_ = false;
+  //   next_children_count_ = 100;
+  // }
+
+  if (event_name == "LynxUIOperationAsyncQueue::FlushInterval") {
+    PERFETTO_ELOG("LynxUIOperationAsyncQueue::FlushInterval ----");
+    is_async_flush_flow_started_ = true;
+    if (event.has_flow_ids()) {
+      async_flush_flow_ids_.clear();
+       auto flow_it = event.flow_ids();
+        for (; flow_it; ++flow_it) {
+          auto flow_id = *flow_it;
+          async_flush_flow_ids_.push_back(static_cast<uint64_t>(flow_id));
+        }
+    }
+  } 
+  // if (event_name == "Timing::Mark.layoutUiOperationExecuteEnd") {
+  //   PERFETTO_ELOG("Timing::Mark.layoutUiOperationExecuteEnd ----");
+  // }
+
   for (auto it = event.debug_annotations(); it; ++it) {
     protos::pbzero::DebugAnnotation::Decoder annotation(*it);
     if (annotation.has_name()) {
@@ -645,7 +671,8 @@ base::Status TrackEventTokenizer::HandleExtraArgsValues(
       }
       if (!pipeline_id.empty() &&
           (event_name == "Timing::Mark.loadBundleStart" ||
-           event_name == "Timing::Mark.setup_load_template_start")) {
+           event_name == "Timing::Mark.setup_load_template_start" ||
+           event_name == "Timing::Mark.load_template_start")) {
         context_->storage->AddPipelineFlag(pipeline_id, "Lynx FCP");
         pipeline_id = "";
       }
@@ -657,14 +684,27 @@ base::Status TrackEventTokenizer::HandleExtraArgsValues(
         url = "";
       }
       if (IsLynxUpdateRelatedEvent(event_name) && !pipeline_id.empty() &&
-          event.has_flow_ids()) {
+          event.has_flow_ids() && async_flush_pipeline_ids_.count(pipeline_id) <= 0) {
         auto flow_it = event.flow_ids();
         std::vector<uint64_t> flow_ids;
         for (; flow_it; ++flow_it) {
           auto flow_id = *flow_it;
           flow_ids.push_back(static_cast<uint64_t>(flow_id));
         }
+        PERFETTO_ELOG("set pipeline flow update ids event name: %s, %lld, %s", pipeline_id.c_str(), flow_ids[0], event_name.c_str());
         context_->storage->SetPipelineFlowIds(pipeline_id, flow_ids);
+      }
+
+      if (!pipeline_id.empty() && event_name == "Timing::Mark.layoutUiOperationExecuteStart") {
+        async_flush_pipeline_ids_.insert(pipeline_id);
+
+        // PERFETTO_ELOG("Timing::Mark.layoutUiOperationExecuteStart ----");
+        if (is_async_flush_flow_started_ && async_flush_flow_ids_.size() > 0) {
+          context_->storage->SetPipelineFlowIds(pipeline_id, async_flush_flow_ids_);
+             PERFETTO_ELOG("set pipeline flow ids: %s, %lld", pipeline_id.c_str(), async_flush_flow_ids_[0]);
+          async_flush_flow_ids_.clear();
+          is_async_flush_flow_started_ = false;
+        }
       }
     }
   }

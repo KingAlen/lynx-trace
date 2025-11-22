@@ -20,6 +20,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <set>
 
 #include "perfetto/base/status.h"
 #include "perfetto/protozero/proto_decoder.h"
@@ -94,6 +95,11 @@ class TrackEventTokenizer {
   const StringId counter_name_thread_instruction_count_id_;
 
   std::array<StringId, 4> counter_unit_ids_;
+//   int next_children_count_ = 100;
+//   bool print_mode_ = false;
+   std::vector<uint64_t> async_flush_flow_ids_;
+   bool is_async_flush_flow_started_ = false;
+   std::set<std::string> async_flush_pipeline_ids_;
 };
 
 }  // namespace trace_processor

@@ -663,7 +663,6 @@ def InstallNodeModules(force_clean=False):
 
   subprocess.check_call([
       os.path.join(TOOLS_DIR, 'pnpm'), 'install', '--shamefully-hoist',
-      '--frozen-lockfile'
   ],
                         cwd=UI_DIR,
                         env=env)
